@@ -10,6 +10,8 @@ def zeros(size: tuple | int):
         return [[0.0 for i in range(size[0])] for j in range(size[1])]
     elif isinstance(size, int):
         return [0.0 for i in range(size)]
+    else:
+        raise TypeError('Wrong size type. Size must be integer or tuple of integers')
 
 
 
