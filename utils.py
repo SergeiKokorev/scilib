@@ -132,3 +132,14 @@ def compare(m1: list, m2: list) -> bool:
                 return False
 
     return True
+
+
+def diag(m: list) -> list:
+    '''
+        Returns diagonal matrix of the matrix m
+    '''
+    n = len(m)
+    d = linalg.zeros(size=(n, n))
+    for i in range(n):
+        d[i][i] = m[i][i]
+    return d

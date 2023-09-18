@@ -1,7 +1,9 @@
+from math import floor
 from copy import deepcopy
 from utils import (
-    is_square, max_element, swap_rows, 
-    separate, compare, join
+    is_square, swap_rows, 
+    separate, compare, join,
+    diag
 )
 
 
@@ -149,6 +151,21 @@ def mult(m1: list | float, m2: list | float) -> list:
     return res
 
 
+def pow(m: list, n: int) -> list:
+
+    '''
+        Returns matrix m to the power n
+    '''
+    if n == 1:
+        return m
+    else:
+        p = pow(m, floor(n / 2))
+        if n % 2 == 0:
+            return mult(p, p)
+        else:
+            return mult(p, mult(p, m))
+
+
 def add(m1: list, m2: list) -> list:
     '''
         Matrix addition
@@ -182,7 +199,6 @@ def sub(m1: list, m2: list) -> list:
     return add(m1, mult((-1), m2))
 
 
-
 def upper(m: list, copy: bool = False):
 
     rows = len(m)
@@ -200,17 +216,45 @@ def upper(m: list, copy: bool = False):
     return c
 
 
+def inverse_tri(t: list) -> list:
+    '''
+        Invertes triangular matrix    
+    '''
+    if not is_square(t): return False
+
+    n = len(t)
+    lam = diag(t)
+    tu = sub(t, lam)
+    for i in range(n):
+        lam[i][i] = 1 / lam[i][i]
+    
+    tinv = identity(n)
+    for i in range(1, n):
+        tinv = add(pow(mult(mult((-1), lam), tu), i), tinv)
+    
+    return mult(tinv, lam)
+
+
 def inverse(m: list, diag: bool = False) -> list | bool:
     '''
         Inverse matrix m
             Parameters:     m: list
                                 Matrix to inverse. Must be square matrix
-                            diag: bool
-                                Is the matrix m diagonal matrix
+                            diag: bool, optional
+                                Is the matrix m diagonal matrix. Default False
             Returns:        result: list | bool
                                 Return inverse matrix or if inversion not succeed
                                 False
     '''
+
+    def find_row_with_max_element(m, col_num: int=0, starting_row: int=0):
+        tmp = m[starting_row][col_num]
+        row_idx = starting_row
+        for k in range(starting_row+1, len(m)):
+            if abs(m[k][col_num]) > abs(tmp):
+                row_idx = k
+                tmp = m[k][col_num]
+        return row_idx
 
     if not is_square(m):
         return False
@@ -235,7 +279,7 @@ def inverse(m: list, diag: bool = False) -> list | bool:
     while not flag and count < max_count:
         for i in range(num_rows + 1):
             if joint_matrix[i][i] == 0.0:
-                max_el_idx = max_element(joint_matrix, i, i)[0][0]
+                max_el_idx = find_row_with_max_element(joint_matrix, i, i)
                 joint_matrix = swap_rows(joint_matrix, i, max_el_idx)
             div_e = joint_matrix[i][i]
             factor = 1 / div_e
@@ -261,7 +305,7 @@ def inverse(m: list, diag: bool = False) -> list | bool:
 def det(m: list, mul: int = 1.0) -> float | bool:
 
     '''
-        Return determinant of the matrix m
+        Returns determinant of the matrix m
         ----------------------------------
             Parameters:     m: list
                                 Matrix which determinant need to be found
@@ -287,3 +331,87 @@ def det(m: list, mul: int = 1.0) -> float | bool:
             sign *= -1
             answer = answer + mul * det(mi, sign * m[0][col])
     return answer
+
+
+def lu(a: list, permute_l: bool=False) -> tuple:
+
+    '''
+        Computes LU decomposition of a matrix with partial pivoting
+        ----------------------------------------------------------
+        Parameters:     m: (M, N) array_like
+                            Array to decompose
+                        permute_l: bool, optional
+                            Perfome the multiplication P*L (Default do not perfome)
+        Returns:        (if permute_l is False)
+                        p: array_like
+                            Permutation array or vectors depending on p_indices
+                        l: array_like
+                            Lower triangulat matrix
+                        u: array_like
+                            Upper triangular matrix
+                        (if permut_l is True)
+                        pl: array_like
+                            Permute L matrix
+                        u: array_like
+                            Upper diagonal matrix
+    '''
+
+    n = len(a)
+    P = identity(n) # pivot matrix
+    U = deepcopy(a) # upper triangular matrix
+    L = identity(n) # lower triangular matrix
+
+    for k in range(n):
+        j = max(range(k, n), key=lambda i: abs(U[i][k]))
+        I = identity(n)
+        I[k], I[j] = I[j], I[k]
+        P = mult(P, I)
+        U[k], U[j] = U[j], U[k]
+        
+        for r in range(k + 1, n):
+            if U[r][k] != 0.0:
+                ratio = (-1) * U[k][k] / U[r][k]
+                U[r] = [ui + uk / ratio for ui, uk in zip(U[r], U[k])]
+
+    if permute_l:
+        L = mult(a, inverse_tri(U))
+        return mult(P, L), U
+    else:
+        L = mult(mult(transpose(P, copy=True), a), inverse_tri(U))
+        return P, L, U
+
+
+def solve(a: list, b: list) -> list:
+    '''
+        Solves the linear equation a x = b for the unknows x for square a matrix
+        ------------------------------------------------------------------------
+        Parameters:     a(N, N) array_like
+                            Square input matrix
+                        b: (N) array_like
+                            Input data for right hand side
+        
+        Returns:        x: (N) assray_like
+                            The solution array
+
+        Raises:         ValueErros
+                            If size mismatches detected or input a is not square
+    '''
+
+    if not is_square(a) : raise ValueError('Matrix a is not square.')
+    if (n:=len(a)) != (m:=len(b)) : raise ValueError('Matrix a is mismatched vector b.')
+
+    y = zeros(n)
+    x = zeros(n)
+
+    P, L, U = lu(a)
+    bp = mult(b, inverse(P))
+
+    # Forward substitution [L]{y} = {b}, {y} = [U]{x}
+    for i in range(n):
+        y[i] = (1 / L[i][i]) * (bp[i] - sum(L[i][j] * y[j] for j in range(i)))
+    
+    # Backward substitution [L]{x} = {y}
+    for i in range(n-1, -1, -1):
+        x[i] = (1 / U[i][i]) * (y[i] - sum(U[i][j] * x[j] for j in range(i+1, n)))
+    
+    return x

@@ -1,5 +1,5 @@
 from math import floor
-from linalg import zeros, mult, inverse
+from linalg import zeros, solve
 
 
 def __fact(n):
@@ -32,7 +32,7 @@ def __difference_coefficient(m: int, n: int) -> list:
         if i == m:
             rhs[i] = __fact(m)
     
-    return mult(rhs, inverse(pm))
+    return solve(pm, rhs)
 
 
 def forward_derivative(f: callable, x0: float, h: float=1e-5, n: int=1, args: tuple=()) -> float:
