@@ -23,7 +23,7 @@ def identity(n: int) -> list:
 
 def norm(m: list) -> float:
     '''
-        Compute Euclidian norm of vector or matrix
+        Compute Euclidian norm of a vector or a matrix
     '''
 
     if not hasattr(m, '__iter__'):
@@ -43,11 +43,11 @@ def distance(v1: list, v2: list) -> float:
     '''
         Returns distance between two vectors v1 and v2
     '''
-    if not isinstance(v1, list) or not isinstance(v2, list):
+    if not hasattr(v1, '__iter__') or not hasattr(v2, '__iter__'):
         raise TypeError('Vectors must be list type')    
     
     if len(v1) != len(v2):
-        raise ValueError('Vectors must be same dimention')
+        raise ValueError('Vectors must be same dimension')
     
     return sum([(v1i - v2i) ** 2 for v1i, v2i in zip(v1, v2)]) ** 0.5
 
@@ -56,8 +56,11 @@ def transpose(m: list, copy: bool = False) -> list:
 
     '''
         Transpose matrix or vector
-        Parameters  copy: bool (optional, default False)
-                        make copy list m or change list m
+        Parameters:     m: matrix to transpose
+                        copy: bool (optional, default False)
+                            make copy list m or change list m
+        Returns:        result: list
+                            Transposed matrix
     '''
 
     res = m if not copy else deepcopy(m)
@@ -101,7 +104,7 @@ def dot(m1: list, m2: list) -> float | bool:
 def mult(m1: list | float, m2: list | float) -> list:
 
     '''
-        Return matrix multiplication
+        Return multiplication of matrices, matrices and scalars
     '''
 
     # Multiplication scalar by scalar
@@ -156,6 +159,7 @@ def pow(m: list, n: int) -> list:
     '''
         Returns matrix m to the power n
     '''
+    print(n, m)
     if n == 1:
         return m
     else:
@@ -302,7 +306,7 @@ def inverse(m: list, diag: bool = False) -> list | bool:
         return inverse_matrix
 
 
-def det(m: list, mul: int = 1.0) -> float | bool:
+def det(m: list, mul: int = 1.0, lu: bool = True) -> float | bool:
 
     '''
         Returns determinant of the matrix m
