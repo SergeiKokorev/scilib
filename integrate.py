@@ -36,9 +36,9 @@ def solve_ipv(fun, tspan, y0, method='RK45', teval=None, args=()):
     
     for s in range(teval):
         k1 = fun(tf, yf, *args)
-        k2 = fun(tf + h / 2, [yfi + h * k1i / 2 for yfi, k1i in zip(yf, k1)])
-        k3 = fun(tf + h / 2, [yfi + h * k2i / 2 for yfi, k2i in zip(yf, k2)])
-        k4 = fun(tf + h, [yfi + h * k3i for yfi, k3i in zip(yf, k3)])
+        k2 = fun(tf + h / 2, [yfi + h * k1i / 2 for yfi, k1i in zip(yf, k1)], *args)
+        k3 = fun(tf + h / 2, [yfi + h * k2i / 2 for yfi, k2i in zip(yf, k2)], *args)
+        k4 = fun(tf + h, [yfi + h * k3i for yfi, k3i in zip(yf, k3)], *args)
         yf = [
             yfi + (h / 6) * (k1i + 2 * k2i + 2 * k3i + k4i) 
             for yfi, k1i, k2i, k3i, k4i in zip(yf, k1, k2, k3, k4)

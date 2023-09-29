@@ -187,7 +187,7 @@ def fsolve(func:callable, x0:list, args=(), dx:float=None, jac:callable=None, rt
 def root(p: list, tol:float=1e-6, max_iter:int=800) -> list[float]:
 
     '''
-        Computes roots of a polynomial with coefficients p by using Laguerre's ,ethod.
+        Computes roots of a polynomial with coefficients p by using Laguerre's method.
         --------------------------------------------------
         Parameters:
         -----------
@@ -227,7 +227,7 @@ def root(p: list, tol:float=1e-6, max_iter:int=800) -> list[float]:
     n = len(p) - 1
     roots = [0.0 for i in range(n)]
     p = [ai for ai in p]
-    x0 = -1.0
+    x0 = 0.0
 
     for i in range(n):
         for k in range(max_iter):
