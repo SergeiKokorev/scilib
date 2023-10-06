@@ -159,7 +159,7 @@ def pow(m: list, n: int) -> list:
     '''
         Returns matrix m to the power n
     '''
-    print(n, m)
+
     if n == 1:
         return m
     else:
@@ -385,7 +385,7 @@ def lu(a: list, permute_l: bool=False) -> tuple:
         return P, L, U
 
 
-def solve(a: list, b: list) -> list:
+def solve(a: list, b: list, tridiagonal=False) -> list:
     '''
         Solves the linear equation a x = b for the unknows x for square a matrix
         ------------------------------------------------------------------------
@@ -393,6 +393,8 @@ def solve(a: list, b: list) -> list:
                             Square input matrix
                         b: (N) array_like
                             Input data for right hand side
+                        tridiagonal: bool, optional
+                            Wether the matrix a tridiagonal or not. Default False
         
         Returns:        x: (N) assray_like
                             The solution array
@@ -404,11 +406,28 @@ def solve(a: list, b: list) -> list:
     if not is_square(a) : raise ValueError('Matrix a is not square.')
     if (n:=len(a)) != (m:=len(b)) : raise ValueError('Matrix a is mismatched vector b.')
 
+    if tridiagonal:
+        bm = [a[i][i] for i in range(n) for j in range(n) if i == j]
+        am = [a[i+1][i] for i in range(n - 1) for j in range(n) if i == j]
+        cm = [a[i][i+1] for i in range(n) for j in range(n - 1) if i == j]
+        dm = deepcopy(b)
+        x = zeros(n)
+
+        for i in range(n - 1):
+            w = am[i] / bm[i]
+            bm[i + 1] -= w * cm[i]
+            dm[i + 1] -= w * dm[i]
+        x[n - 1] = dm[n - 1] / bm[n - 1]
+        for i in range(n - 2, -1, -1):
+            x[i] = (dm[i] - cm[i] * x[i + 1]) / bm[i]
+        
+        return x
+
     y = zeros(n)
     x = zeros(n)
 
     P, L, U = lu(a)
-    bp = mult(b, inverse(P))
+    bp = mult(b, transpose(P, copy=True))
 
     # Forward substitution [L]{y} = {b}, {y} = [U]{x}
     for i in range(n):

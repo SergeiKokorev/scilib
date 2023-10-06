@@ -26,15 +26,18 @@ def polyder(p:list, n:int) -> float:
 
 class __AbstractPoly(ABC):
 
-    def __init__(self, coef: list, domain=None, window=None, symbol='x'):
-        self.coef = coef
-        self.sym = symbol
-        self.domain = [-1, 1] if not domain else domain
-        self.window = window
+    def __init__(self, coef: list, symbol='x'):
+        self.__coef = coef
+        self.__sym = symbol
+        self.__degree = len(self.__coef) - 1
         super().__init__()
 
     @abstractproperty
     def degree(self):
+        pass
+
+    @abstractproperty
+    def coef(self):
         pass
 
     @abstractmethod
@@ -44,12 +47,25 @@ class __AbstractPoly(ABC):
 
 class Polynomial(__AbstractPoly):
 
-    def __init__(self, coef: list, domain=None, window=None, symbol='x'):
-        super().__init__(coef, domain, window, symbol)
+    def __init__(self, coef: list, symbol='x'):
+        super().__init__(coef, symbol)
 
     @property
     def degree(self):
-        return len(self.coef) - 1
+        return self.__degree
+
+    @property
+    def coef(self):
+        return self.__coef
+    
+    @coef.setter
+    def coef(self, coef):
+        if not hasattr(coef, '__iter__'):
+            return None
+        if not all([isinstance(ci, float | int) for ci in coef]):
+            return None
+        self.__coef = coef
+        self.__degree = len(self.__coef) - 1
 
     def __add__(self, p:Polynomial):
 
@@ -180,3 +196,7 @@ class Polynomial(__AbstractPoly):
             return Polynomial(self.coef[self.degree - deg:])
 
 
+class PPoly:
+
+    def __init__(self, c) -> None:
+        pass

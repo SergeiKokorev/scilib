@@ -1,4 +1,5 @@
-from linalg import inverse, mult, add, norm
+from linalg import inverse, mult, add, norm, zeros
+from poly import Polynomial
 
 
 def polyder(x:float, p:list, n:int) -> float:
@@ -188,7 +189,7 @@ def root(p: list, tol:float=1e-6, max_iter:int=800) -> list[float]:
 
     '''
         Computes roots of a polynomial with coefficients p by using Laguerre's method.
-        --------------------------------------------------
+        -----------------------------------------------------------------------------
         Parameters:
         -----------
                         p : array_like
@@ -254,3 +255,39 @@ def root(p: list, tol:float=1e-6, max_iter:int=800) -> list[float]:
             x0 -= a
 
     return roots
+
+
+def curve_fit(f, xdata, ydata, p0=None, jac=None, lam0=10, est=1e-6, max_iter=800):
+
+    '''
+    Use non-linear least squares to fit a function, f, to data
+    Assume ydata = f(xdata, *params)
+    ----------------------------------------------------------
+    Parameters: f: callable
+                    The model function, f(x, ...). It must take an independent
+                    variable as the first argument and the parameters to fit as
+                    separate remainin arguments.
+                xdata: array_like
+                    The independent variables a length m
+                ydata: array_like
+                    The dependent variable, a length m
+                p0: array_like, optional
+                    Initial guess for the parameters (length n). If None (default),
+                    then the initial parameters will all be set to 1
+                lam0: float
+                    Initial damping factor
+                jac: callable, optional
+                    Function with signature jac(x, ...) which computes the 
+                    Jacobian matrix of the model function with respect to 
+                    parameters. If None (default), the Jacobian will be estimated
+                    numerically
+                est: float | array_like
+                    Approxiamtion error. If float then the estimation error apply to all
+                    parameters of the model
+    Returns: potp: array
+                    Optimal values for the parameters so that the sum of the squared
+                    residuals of f(xdata, *popt) - ydata is minimized
+    '''
+
+    if max_iter == 0:
+        raise RuntimeError("Maximum number of iterations esceeded. No solution found")
