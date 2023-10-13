@@ -1,5 +1,7 @@
-from linalg import inverse, mult, add, norm, zeros
-from poly import Polynomial
+import numpy as np
+
+
+from linalg import inverse, mult, add, norm
 
 
 def polyder(x:float, p:list, n:int) -> float:
@@ -26,8 +28,9 @@ def polyder(x:float, p:list, n:int) -> float:
 
 def synthetic(p:list, d:list) -> list[float]:
     '''
-        Compute synthetic division of a polynomial with the specific coefficients p and denominator (x - d)
-        --------------------------------------------------------------------------------------
+        Compute synthetic division of a polynomial with the specific 
+        coefficients p and denominator (x - d)
+        ------------------------------------------------------------
         Parameters:     
         -----------
                         p : array_like
@@ -106,6 +109,40 @@ def newton_raphson(f:callable, x0:float=None, args:tuple=(), dx:float=1e-6, tol:
         return xn
     else:
         return newton_raphson(f, xn, args, dx, tol, max_iter-1)
+
+
+def newton_raphson2(fun, x0, args=(), tol=1e-6, dx=None, max_iter=10):
+
+    n = len(x0)
+
+    if max_iter == 0:
+        raise RuntimeError('Maximum iteration exceeded. No sulution found')
+    
+    def fprim(f, x, dx, args):
+        return (f(x + dx, *args) - f(x - dx, *args)) / (2 * dx)
+    
+    def f2prime(f, x, dx, args):
+        return (f(x + dx, *args) - 2 * f(x, *args) + f(x - dx, *args)) / (dx ** 2)
+    
+    def uprime(f, x, dx, args):
+        fp = fprim(f, x, dx, args)
+        fx = f(x, *args)
+        return fx * fp / (fp ** 2 - fx * f2prime(f, x, dx, args))
+
+    if not hasattr(x0, '__iter__'):
+        x0 = np.array(x0)
+    
+    if not hasattr(dx, '__iter__'):
+        dx = np.array([dx for i in range(n - 1)]) if dx else \
+        np.array([1e-10 for i in range(n - 1)])
+
+    xn = x0 - uprime(fun, x0, dx, args)
+    es = sum([(xni - x0i) ** 2 for xni, x0i in zip(xn, x0)]) ** 0.5
+
+    if abs(es) <= tol:
+        return xn
+    else:
+        return newton_raphson2(fun, xn, args, tol, dx, max_iter - 1)
 
 
 def fsolve(func:callable, x0:list, args=(), dx:float=None, jac:callable=None, rtol:float=1e-6, max_iter:int=100, w:float=None) -> list[float]:

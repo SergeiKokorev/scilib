@@ -1,3 +1,13 @@
+from optimize import newton_raphson2
+
+
+def rk45(y, fun, yn, t, h):
+    
+    s1 = yn + (h / 6) * (fun(t, yn) + fun(t + h, y))
+    s2 = (2 * h / 3) * fun(t + h / 2, 0.5 * (yn + y) + (h / 8) * (fun(t, yn) - fun(t + h, y)))
+    return s1 + s2
+
+
 def solve_ipv(fun, tspan, y0, method='RK45', teval=None, args=()):
     '''
         Solve an initial value problem for ODE
@@ -49,3 +59,21 @@ def solve_ipv(fun, tspan, y0, method='RK45', teval=None, args=()):
             ysol[i].append(yf[i])
     
     return tsol, ysol
+
+
+def solve_bvp(fun, bc, x, y, max_it=10):
+
+    poly = []
+
+    if max_it <= 0:
+        print('Maximum number of iterations exeeded. No solution found.')
+        return None
+
+    n = len(x)
+    ysol = []
+
+    for i in range(n - 1):
+        h = x[i + 1] - x[i]
+        ysol.append(newton_raphson2(rk45, y[:, i + 1], args=(fun, y[:, i], x[i], h)))
+    
+    

@@ -194,9 +194,3 @@ class Polynomial(__AbstractPoly):
             return self.copy()
         else:
             return Polynomial(self.coef[self.degree - deg:])
-
-
-class PPoly:
-
-    def __init__(self, c) -> None:
-        pass

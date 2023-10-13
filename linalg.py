@@ -1,4 +1,5 @@
-from math import floor
+import numpy as np
+from math import floor, hypot
 from copy import deepcopy
 from utils import (
     is_square, swap_rows, 
@@ -37,6 +38,12 @@ def norm(m: list) -> float:
         for row in m:
             s += sum([col ** 2 for col in row])
         return s ** 0.5
+
+
+def normalize(v: list) -> list:
+
+    n = norm(v)
+    return [vi / n for vi in v]
 
 
 def distance(v1: list, v2: list) -> float:
@@ -137,7 +144,7 @@ def mult(m1: list | float, m2: list | float) -> list:
             res[i] = sum([eli * m2i for eli, m2i in zip(el, m2)])
         return res
 
-    # Multiply a matrix by a mtrix
+    # Multiply a matrix by a matrix
     n, m, p, q = len(m1), len(m1[0]), len(m2), len(m2[0])
 
     if m != p:
@@ -337,8 +344,9 @@ def det(m: list, mul: int = 1.0, lu: bool = True) -> float | bool:
     return answer
 
 
-def lu(a: list, permute_l: bool=False) -> tuple:
 
+def lu(a: list) -> tuple:
+    
     '''
         Computes LU decomposition of a matrix with partial pivoting
         ----------------------------------------------------------
@@ -361,28 +369,105 @@ def lu(a: list, permute_l: bool=False) -> tuple:
     '''
 
     n = len(a)
-    P = identity(n) # pivot matrix
-    U = deepcopy(a) # upper triangular matrix
-    L = identity(n) # lower triangular matrix
+    L = identity(n)
+    P = identity(n)
+    U = deepcopy(a)
 
-    for k in range(n):
-        j = max(range(k, n), key=lambda i: abs(U[i][k]))
+    for j in range(n):
+
+        k = max(range(j, n), key=lambda i: abs(U[i][j]))
+    
+        if j != 0:
+            for i in range(j, n):
+                L[i][j - 1], L[k][j - 1] = L[k][j - 1], L[i][j - 1]
+
         I = identity(n)
-        I[k], I[j] = I[j], I[k]
+        I[j], I[k] = I[k], I[j]
         P = mult(P, I)
-        U[k], U[j] = U[j], U[k]
-        
-        for r in range(k + 1, n):
-            if U[r][k] != 0.0:
-                ratio = (-1) * U[k][k] / U[r][k]
-                U[r] = [ui + uk / ratio for ui, uk in zip(U[r], U[k])]
+        U[j], U[k] = U[k], U[j]
+        pivot = U[j][j]
+        for i in range(j + 1, n):
+            alfa = U[i][j] / pivot
+            for k in range(j, n):
+                U[i][k] -= U[j][k] * alfa
+            L[i][j] = alfa
 
-    if permute_l:
-        L = mult(a, inverse_tri(U))
-        return mult(P, L), U
-    else:
-        L = mult(mult(transpose(P, copy=True), a), inverse_tri(U))
-        return P, L, U
+    return P, L, U
+
+
+def qr(m: list) -> tuple:
+
+    '''
+        Computes QR decomposition of a square matrix a by usin Givens rotation
+        ----------------------------------------------------------------------
+        Parameters:     m: (N, N) array_like
+                            Array to decompose
+        Returns:        tuple of Q, R
+                            where Q is an orthogonal matrix
+                                  R is an upper triangular matrix
+                                  A = QR
+    '''
+
+    n = len(m)
+    R = deepcopy(m)
+    Q = zeros(size=(n, n))
+
+    for j in range(n):
+        for i in range(j + 1, n):
+
+            g = zeros(size=(n, n))
+
+            a, b = R[j][j], R[i][j]
+            r = hypot(a, b)
+            c = a / r
+            s = -b / r
+            g[i][j] = s
+            g[j][i] = -s
+            for k in range(n):
+                g[k][k] = c if (k == j or k == i) else 1
+
+            Q = transpose(g, copy=True) if i == 1 else mult(Q, transpose(g, copy=True))
+            R = mult(g, R)
+    
+    return Q, R
+
+
+def __eigvec(a, eigval):
+
+    n = len(a)
+    I = identity(n)
+    m = sub(a, mult(I, eigval))
+    p, l, u = lu(a)
+    v = [0.0 for i in range(n)]
+    v[n - 1] = 1.0
+    for i in range(n - 2, -1, -1):
+        v[i] = (-1) * u[i][i + 1] * v[i + 1] / u[i][i]
+    
+    print(f'{eigval =}, {normalize(v) = }')
+    return normalize(v)
+
+
+def eig(a):
+
+    m = deepcopy(a)
+    for i in range(800):
+
+        if all([abs(m[i][j]) < 1e-10 for i in range(1, len(m)) for j in range(i)]):
+
+            eigval = [m[i][i] for i in range(len(m))]
+            eigvect = []
+
+            for val in eigval:
+                n = deepcopy(a)
+                for i in range(len(m)):
+                    n[i][i] = n[i][i] - val
+                eigvect.append(__eigvec(m, val))
+            return (eigval, eigvect)
+        else:
+            q, r = qr(m)
+            m = mult(mult(transpose(q, copy=True), m), q)
+
+    raise RuntimeError('Eigen runtime error. Maximum numbers of iterations exceeded. No solution found.')
 
 
 def solve(a: list, b: list, tridiagonal=False) -> list:
