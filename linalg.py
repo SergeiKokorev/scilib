@@ -1,4 +1,3 @@
-import numpy as np
 from math import floor, hypot
 from copy import deepcopy
 from utils import (
@@ -344,6 +343,9 @@ def det(m: list, mul: int = 1.0, lu: bool = True) -> float | bool:
     return answer
 
 
+def gaussian(a):
+    pass
+
 
 def lu(a: list) -> tuple:
     
@@ -451,17 +453,14 @@ def eig(a):
 
     m = deepcopy(a)
     for i in range(800):
-
         if all([abs(m[i][j]) < 1e-10 for i in range(1, len(m)) for j in range(i)]):
 
             eigval = [m[i][i] for i in range(len(m))]
-            eigvect = []
-
-            for val in eigval:
-                n = deepcopy(a)
-                for i in range(len(m)):
-                    n[i][i] = n[i][i] - val
-                eigvect.append(__eigvec(m, val))
+            eigvect = q
+            rhs = mult(identity(len(a)), m[0][0])
+            lhs = sub(a, rhs)
+            p, l, u = lu(lhs)
+            print(u)
             return (eigval, eigvect)
         else:
             q, r = qr(m)
