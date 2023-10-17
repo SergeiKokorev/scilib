@@ -346,7 +346,7 @@ def det(m: list, mul: int = 1.0, lu: bool = True) -> float | bool:
 def gaussian(A, b, copy=True):
 
     '''
-        Computes Gaussian elimimination.
+        Computes Gaussian elimination.
         --------------------------------
         Parameters:     A: array_like:
                             Square matrix of coefficients size (N, N)
