@@ -343,8 +343,68 @@ def det(m: list, mul: int = 1.0, lu: bool = True) -> float | bool:
     return answer
 
 
-def gaussian(a):
-    pass
+def gaussian(A, b, copy=True):
+
+    '''
+        Computes Gaussian elimimination.
+        --------------------------------
+        Parameters:     A: array_like:
+                            Square matrix of coefficients size (N, N)
+                        b: array_like:
+                            RHS of the system of equations, size(N,)
+                        copy: bool, optional
+                            Make copy of matrix A and vector b
+        Returns:        result: tuple
+                            A, b
+                            A is a upper triangular matrix
+                            b is new vector of coefficients
+        Raise error:    TypeError:
+                            If the matrix A is not square
+                        RuntimeError:
+                            If the len(A) != len(b)
+                        TypeError:
+                            If A contains row with all elements equal zero
+    '''
+
+    a = deepcopy(A) if copy else A
+    b = deepcopy(b) if copy else b
+
+    if not is_square(a):
+        raise TypeError('During Gaussian elimination an error occurred. Matrix A must be square.')
+    
+    if len(a) != len(b):
+        raise RuntimeError('During Gaussian elimination an error occurred. Number of rows of matrix A' \
+                           ' must be equal number of rows vector b')
+
+    if any([all([row[i] == 0 for i in range(len(a))]) for row in a]):
+        raise TypeError('During Gaussian elimination an error occurred. Matrix A contains zero row.')
+    
+    n = len(a)
+
+    for j in range(len(a)):
+
+        k = max(range(j, n), key=lambda i: abs(a[i][j]))
+
+        a[j], a[k] = a[k], a[j]
+        b[j], b[k] = b[k], b[j]
+
+        if not a[j][j]:
+            continue
+        else:
+            pivot = a[j][j]
+
+        for i in range(j + 1, n):
+            ratio = a[i][j] / pivot
+            b[i] -= b[j] * ratio
+            for h in range(j, n):
+                a[i][h] -= a[j][h] * ratio
+
+    for i in range(n):
+        pivot = a[i][i]
+        b[i] /= pivot
+        a[i] = [ai / pivot for ai in a[i]]
+
+    return a, b
 
 
 def lu(a: list) -> tuple:
