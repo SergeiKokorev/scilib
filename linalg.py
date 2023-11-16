@@ -75,10 +75,7 @@ def transpose(m: list, copy: bool = False) -> list:
         raise TypeError('Argument has to be iterable')
     
     if hasattr(res[0], '__iter__'):
-        tmp = deepcopy(res)
-        for row in range(len(res)):
-            for col in range(len(res[0])):
-                res[row][col] = tmp[col][row]
+        return list(map(list, zip(*m)))
     else:
         tmp = deepcopy(res)
         res = []

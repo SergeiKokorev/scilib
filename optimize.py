@@ -1,16 +1,39 @@
 import numpy as np
 
 
-from linalg import inverse, mult, add, norm
+from inspect import signature
+
+
+from linalg import inverse, mult, add, norm, transpose, sub, solve
+from utils import mean_squared_error, diag
+
+
+class gardient:
+
+    def __init__(self, algoryth: str) -> None:
+        self.__alg: str
+
+    def __new__(cls, *args, **kwargs):
+        pass
+
+
+class optimize:
+
+    def __init__(self):
+        self.__alg: object
+
+    def set_alg(self, algorythm: object):
+        pass
+
 
 
 def polyder(x:float, p:list, n:int) -> float:
     '''
         Computes polynomial derivative of n-order at the specific point x
         ---------------------------------------------------
-        Parameters:      x : float
+        Parameters:     x : float
                             The point to compute a polynomial
-                        args : array_like
+                        p : array_like
                             Cpolynomial coefficients a[0] * x**n + a[1] * x**(n - 1) + ... + a[n] = 0
                         n : int
                             Order of the derivative
@@ -21,7 +44,7 @@ def polyder(x:float, p:list, n:int) -> float:
     if n == 1:
         return sum([ai * (m - i) * x ** (m - i - 1) for i, ai in enumerate(p[:-1])])
     elif n == 0:
-        return p(x, p)
+        return sum(ai * x ** (m - i) for i, ai in enumerate(p))
     else:
         return polyder(x, [ai * (m - i) for i, ai in enumerate(p[:-1])], n - 1)
 
@@ -328,3 +351,46 @@ def curve_fit(f, xdata, ydata, p0=None, jac=None, lam0=10, est=1e-6, max_iter=80
 
     if max_iter == 0:
         raise RuntimeError("Maximum number of iterations esceeded. No solution found")
+
+
+def grad_desc(f, xdata, ydata, p0=None, jac=None, teta=0.001, est=1e-6, max_iter=10):
+
+    if max_iter == 0:
+        raise RuntimeError("Maximum number of iterations exceeded. No solution found.")
+
+    n = len(xdata)
+    m = len(ydata)
+    nargs = len(signature(f).parameters) - 1
+    popt = p0 if p0 else [1.0 for i in range(nargs)]
+    darg = [1e-3 for i in range(nargs)]
+
+    if n != m:
+        raise RuntimeError("Size of xdata and ydata must be equal.")
+    
+    # Compute Jacobian matrix
+    jacobian = [[0.0 for col in range(nargs)] for row in range(n)]
+    if not jac:
+        for row in range(n):
+            for col in range(nargs):
+                arg1 = [popt[k] + darg[k] if col == k else popt[k] for k in range(nargs)]
+                arg2 = [popt[k] - darg[k] if col == k else popt[k] for k in range(nargs)]
+                jacobian[row][col] = (f(xdata[row], *arg1) - f(xdata[row], *arg2)) / (2 * darg[col])
+    else:
+        for row in range(n):
+            jacobian = jac(xdata[row], *popt)
+
+    # Compute step size
+    jacobian_t = transpose(jacobian)
+    jacobian = mult(teta, jacobian)
+    jac_sqrd = inverse(mult(jacobian_t, jacobian))
+
+    step = mult(jacobian_t, mult([yi - f(xi, *popt) for xi, yi in zip(xdata, ydata)], jac_sqrd))
+    print(step)
+    popt_new = [p + dp for p, dp in zip(popt, step)]
+    rms = mean_squared_error(ydata, [f(xi, *popt_new) for xi in xdata])
+
+    if rms <= est:
+        return popt
+    else:
+        return grad_desc(f, xdata, ydata, popt_new, jac, teta, est, max_iter-1)
+

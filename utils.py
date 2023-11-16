@@ -143,3 +143,7 @@ def diag(m: list) -> list:
     for i in range(n):
         d[i][i] = m[i][i]
     return d
+
+
+def mean_squared_error(y_true, y_predicted):
+    return sum((yt - yp) ** 2 for yt, yp in zip(y_true, y_predicted)) / len(y_true)
