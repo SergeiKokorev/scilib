@@ -157,7 +157,7 @@ def mult(m1: list | float, m2: list | float) -> list:
     return res
 
 
-def pow(m: list, n: int) -> list:
+def pow_mat(m: list, n: int) -> list:
 
     '''
         Returns matrix m to the power n
@@ -166,7 +166,7 @@ def pow(m: list, n: int) -> list:
     if n == 1:
         return m
     else:
-        p = pow(m, floor(n / 2))
+        p = pow_mat(m, floor(n / 2))
         if n % 2 == 0:
             return mult(p, p)
         else:
@@ -237,7 +237,7 @@ def inverse_tri(t: list) -> list:
     
     tinv = identity(n)
     for i in range(1, n):
-        tinv = add(pow(mult(mult((-1), lam), tu), i), tinv)
+        tinv = add(pow_mat(mult(mult((-1), lam), tu), i), tinv)
     
     return mult(tinv, lam)
 
@@ -338,6 +338,16 @@ def det(m: list, mul: int = 1.0, lu: bool = True) -> float | bool:
             sign *= -1
             answer = answer + mul * det(mi, sign * m[0][col])
     return answer
+
+
+def backward_sub(a, b):
+
+    n = len(b)
+    x = [0.0 for i in range(n)]
+    for i in range(n - 1, -1, -1):
+        x[i] = (b[i] / a[i][i]) - (1 / a[i][i]) * sum([a[i][j] * x[j] for j in range(i+1, n)])
+    
+    return x
 
 
 def gaussian(A, b, copy=True):
