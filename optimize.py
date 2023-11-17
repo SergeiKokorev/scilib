@@ -1,6 +1,5 @@
 import numpy as np
 
-
 from linalg import inverse, mult, add, norm
 
 
@@ -328,3 +327,21 @@ def curve_fit(f, xdata, ydata, p0=None, jac=None, lam0=10, est=1e-6, max_iter=80
 
     if max_iter == 0:
         raise RuntimeError("Maximum number of iterations esceeded. No solution found")
+
+
+def bisect(f, a, b, args=(), tol=1e-12, maxiter=800):
+
+    if maxiter == 0:
+        raise RuntimeError("Maximum number of iterations exeeded. No solution found.")
+
+    if np.sign(f(a, *args)) == np.sign(f(b, *args)):
+        raise Exception("The scalar a and b do not bound a root")
+
+    m = (a + b) / 2
+    
+    if abs(f(m, *args)) < tol:
+        return m
+    elif np.sign(f(a, *args)) == np.sign(f(m, *args)):
+        return bisect(f, m, b, args, tol, maxiter - 1)
+    elif np.sign(f(b, *args)) == np.sign(f(m, *args)):
+        return bisect(f, a, m, args, tol, maxiter - 1)
