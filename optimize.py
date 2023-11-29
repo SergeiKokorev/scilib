@@ -1,6 +1,49 @@
 import numpy as np
 
-from linalg import inverse, mult, add, norm
+from linalg import inverse, mult, add, norm, sub
+
+
+def sor(A, b, x0, omega=1, tol=1e-8, max_iter=800):
+
+    '''
+        Find solution of a system of linear equations A x = b using
+        Successive Over-Relaxation mehtod
+        --------------------------------------------------------
+        Parameters:     A : array_like
+                            The matrix of coefficients, size of nxn
+                        b : array_like
+                            RHS of the system, size of n
+                        x0 : array_like
+                            Initial guess, size of n
+                        omega : float, optional
+                            Relaxation factor. Default 1
+                        tol : float, optional
+                            Absolute error A xsol - b. Default 1e-8
+                        max_iter : int, optional
+                            Maximum number of iterations. Default 800
+        Return:         xsol : array_like
+                            The solution of the system
+    '''
+
+    if max_iter == 0:
+        raise RuntimeError('Maximum number of iterations exceeded. No solution found.')
+
+    n = len(x0)
+    xsol = [xi for xi in x0]
+    
+    for i in range(n):
+        sigma = 0.0
+        for j in range(n):
+            if j != i:
+                sigma += A[i][j] * xsol[j]
+        xsol[i] = (1 - omega) * xsol[i] + (omega / A[i][i]) * (b[i] - sigma)
+    
+    residual = np.linalg.norm(sub(mult(A, xsol), b))
+    if residual <= tol:
+        print(f'Steps {800 - max_iter}')
+        return xsol
+    else:
+        return sor(A, b, xsol, omega, tol, max_iter - 1)
 
 
 def polyder(x:float, p:list, n:int) -> float:
