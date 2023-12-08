@@ -2,6 +2,74 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod, abstractproperty
 from optimize import root
+from linalg import solve
+
+
+def _coef_gen(knots, degree=3):
+
+    x = [k[0] for k in knots]
+    y = [k[1] for k in knots]
+
+    ''' ### Generate matrix A ### '''
+    knots_num = len(knots)
+    spline_degree = degree
+    A = [[0 for i in range(4 * (knots_num - 1))] for j in range(4 * (knots_num - 1))]
+
+    # Constrains Si(xi) = yi and Si+1(xi) = yi
+    k = 0
+    row = 0
+    for i in range(knots_num - 1):
+        d = spline_degree
+        for j in range(k, k + spline_degree):
+            A[i * 2][j] = x[i] ** d
+            A[i * 2 + 1][j] = x[i + 1] ** d
+            d -= 1
+        A[i * 2][j + 1] = 1
+        A[i * 2 + 1][j + 1] = 1
+        k = k + spline_degree + 1
+    
+    # Constrains Si'(xi) = Si+1'(xi)
+    row += (2 * (knots_num - 1))
+    k = 0
+    for i in range(row, row + knots_num - 2):
+        d = spline_degree
+        for j in range(k, k + spline_degree):
+            A[i][j] = d * x[i - row + 1] ** (d - 1)
+            A[i][j + spline_degree + 1] = (-1) * d * x[i - row + 1] ** (d - 1)
+            d -= 1
+        k = k + spline_degree + 1
+        
+    # Constrains Si''(xi) = Si+1''(xi)
+    row += (knots_num - 2)
+    k = 0
+    for i in range(row, row + knots_num - 2):
+        d = spline_degree
+        for j in range(k, k + spline_degree - 1):
+            A[i][j] = d * (d - 1) * x[i - row + 1] ** (d - 2)
+            A[i][j + spline_degree + 1] = (-1) * d * (d - 1) * x[i - row + 1] ** (d - 2)
+            d -= 1
+        k = k + spline_degree + 1
+
+    # Boundary natural spline S1''(x1) = 0 and Sn-1''(xn) = 0
+    d = spline_degree
+    for j in range(spline_degree - 1):
+        A[-2][j] = d * (d - 1) * x[0] ** (d - 2)
+        A[-1][j - spline_degree - 1] = d * (d - 1) * x[-1] ** (d - 2)
+        d -= 1
+
+    ''' ### Generate RHS ### '''
+    rhs = [0.0 for i in range(4 * (knots_num - 1))]
+    rhs[0] = y[0]
+
+    col = 0
+    for i, yi in enumerate(y[1:-1], 1):
+        rhs[i + col] = yi
+        rhs[i + 1 + col] = yi
+        col += 1
+    
+    rhs[2 * (knots_num - 1) - 1] = y[-1]
+
+    return solve(A, rhs)
 
 
 def polyder(p:list, n:int) -> float:
@@ -24,109 +92,80 @@ def polyder(p:list, n:int) -> float:
         return polyder([ai * (m - i) for i, ai in enumerate(p[:-1])], n - 1)
 
 
-class __AbstractPoly(ABC):
+class Poly:
 
-    def __init__(self, coef: list, symbol='x'):
+    def __init__(self, coef:list, symbol:str='x', interval:tuple=(0, 1)) -> None:
         self.__coef = coef
         self.__sym = symbol
-        self.__degree = len(self.__coef) - 1
-        super().__init__()
+        self.__interval = interval
 
-    @abstractproperty
+    @property 
     def degree(self):
-        pass
-
-    @abstractproperty
-    def coef(self):
-        pass
-
-    @abstractmethod
-    def __str__(self):
-        pass
-
-
-class Polynomial(__AbstractPoly):
-
-    def __init__(self, coef: list, symbol='x'):
-        super().__init__(coef, symbol)
-
+        return len(self.__coef) - 1
+    
     @property
-    def degree(self):
-        return self.__degree
-
-    @property
-    def coef(self):
+    def coefficients(self):
         return self.__coef
     
-    @coef.setter
-    def coef(self, coef):
+    @property
+    def symbol(self):
+        return self.__sym
+    
+    @coefficients.setter
+    def coefficients(self, coef: list) -> None:
+        
         if not hasattr(coef, '__iter__'):
             return None
-        if not all([isinstance(ci, float | int) for ci in coef]):
+        elif not all([isinstance(ci, (int, float)) for ci in coef]):
             return None
+        
         self.__coef = coef
-        self.__degree = len(self.__coef) - 1
 
-    def __add__(self, p:Polynomial):
-
-        if not isinstance(p, Polynomial): 
-            raise TypeError(f'unsupported operand type(s) for +: {type(p)} and {self.__class__.__name__}')
-
-        c1 = [c1i for c1i in self.coef]
-        c2 = [c2i for c2i in p.coef]
-        if self.degree > p.degree:
-            for i in range(self.degree - p.degree):
-                c2.insert(0, 0.0)
-        elif self.degree < p.degree:
-            for i in range(p.degree - self.degree):
-                c1.insert(0, 0.0)
-        
-        return Polynomial([c1i + c2i for c1i, c2i in zip(c1, c2)])
+    @property
+    def interval(self):
+        return self.__interval
     
-    def __radd__(self, p: Polynomial):
+    @interval.setter
+    def interval(self, interval: tuple):
+        self.__interval = interval
+
+    def __add__(self, p: Poly):
+        return Poly(coef=[c1 + c2 for c1, c2 in zip(self.coefficients, p.coefficients)])
+    
+    def __radd__(self, p: Poly):
         return self.__add__(p)
     
-    def __iadd__(self, p: Polynomial):
-        return self.__add__(p)
-
-    def __sub__(self, p:Polynomial):
-
-        if not isinstance(p, Polynomial): 
-            raise TypeError(f'unsupported operand type(s) for +: {type(p)} and {self.__class__.__name__}')
-
-        c1 = [c1i for c1i in self.coef]
-        c2 = [c2i for c2i in p.coef]
-        if self.degree > p.degree:
-            for i in range(self.degree - p.degree):
-                c2.insert(0, 0.0)
-        elif self.degree < p.degree:
-            for i in range(p.degree - self.degree):
-                c1.insert(0, 0.0)
-        
-        return Polynomial([c1i - c2i for c1i, c2i in zip(c1, c2)])
+    def __iadd__(self, p: Poly):
+        return self.__add__
     
-    def __rsub__(self, p: Polynomial):
-        
-        if not isinstance(p, Polynomial): 
-            raise TypeError(f'unsupported operand type(s) for +: {type(p)} and {self.__class__.__name__}')
+    def __sub__(self, p: Poly):
 
-        c1 = [c1i for c1i in self.coef]
-        c2 = [c2i for c2i in p.coef]
         if self.degree > p.degree:
-            for i in range(self.degree - p.degree):
-                c2.insert(0, 0.0)
-        elif self.degree < p.degree:
-            for i in range(p.degree - self.degree):
-                c1.insert(0, 0.0)
+            c1 = [ci for ci in self.coefficients]
+            c2 = [0 if i > p.degree else (-1) * p.coefficients[p.degree - i] for i in range(self.degree, -1, -1)]
+        else:
+            c1 = [0 if i > self.degree else self.coefficients[self.degree - i] for i in range(p.degree, -1, -1)]
+            c2 = [(-1) * c for c in p.coefficients]
+
+        return Poly(coef=[c1i + c2i for c1i, c2i in zip(c1, c2)])
+
+    def __rsub__(self, p: Poly):
         
-        return Polynomial([c2i - c1i for c1i, c2i in zip(c1, c2)])
-    
-    def __isub__(self, p: Polynomial):
+        if self.degree > p.degree:
+            c1 = [(-1) * ci for ci in self.coefficients]
+            c2 = [0 if i > p.degree else  p.coefficients[p.degree - i] for i in range(self.degree, -1, -1)]
+        else:
+            c1 = [0 if i > self.degree else (-1) * self.coefficients[self.degree - i] for i in range(p.degree, -1, -1)]
+            c2 = [c for c in p.coefficients]
+
+        return Poly(coef=[c1i + c2i for c1i, c2i in zip(c1, c2)])
+
+    def __isub__(self, p: Poly):
         return self.__sub__(p)
 
-    def __mul__(self, p: Polynomial):
+    def __mul__(self, p: Poly):
  
-        if not isinstance(p, Polynomial): 
+        if not isinstance(p, Poly): 
             raise TypeError(f'unsupported operand type(s) for +: {type(p)} and {self.__class__.__name__}')
  
         degree = self.degree + p.degree
@@ -134,63 +173,74 @@ class Polynomial(__AbstractPoly):
 
         for i in range(self.degree + 1):
             for j in range(p.degree + 1 ):
-                prod[i + j] += self.coef[i] * p.coef[j]
+                prod[i + j] += self.coefficients[i] * p.coefficients[j]
 
-        return Polynomial(prod)
+        return Poly(prod)
 
-    def __rmul__(self, p: Polynomial):
+    def __rmul__(self, p: Poly):
         return self.__mul__(p)
 
-    def __imul__(self, p: Polynomial):
+    def __imul__(self, p: Poly):
         return self.__mul__(p)
 
-    def __call__(self, x):
-        return sum([ci * x ** (self.degree - i) for i, ci in enumerate(self.coef)])
+    def __call__(self, x: float):
+        return sum([ci * x ** (self.degree - i) for i, ci in enumerate(self.coefficients)])
 
     def __str__(self):
-        s = ''
-        for i in range(self.degree + 1):
-            sign = '-' if self.coef[i] < 0 else '+'
-            if self.coef[i]:
-                if i == 0:
-                    s += f'{self.coef[i]} {self.sym}**{self.degree}'
-                elif self.degree - i == 1:
-                    s += f' {sign} {abs(self.coef[i])} {self.sym}'
-                elif self.degree - i == 0:
-                    s += f' {sign} {abs(self.coef[i])}'
-                else:
-                    s += f' {sign} {abs(self.coef[i])} {self.sym}**{self.degree - i}'
-        return s
+        d = self.degree
+        res = ''
 
-    def __repr__(self):
-        s = ''
-        for i in range(self.degree + 1):
-            sign = '-' if self.coef[i] < 0 else '+'
-            if self.coef[i]:
-                if i == 0:
-                    s += f'{self.coef[i]} {self.sym}**{self.degree}'
-                elif self.degree - i == 1:
-                    s += f' {sign} {abs(self.coef[i])} {self.sym}'
-                elif self.degree - i == 0:
-                    s += f' {sign} {abs(self.coef[i])}'
+        for i, ai in enumerate(self.__coef):
+
+            if not ai == 0:
+                coef = str(abs(ai)) if not (abs(ai) == 1 and i != d) else ''
+                n = f'^{d - i}' if not ((d - i) == 0 or (d - i) == 1) else ''
+                s = self.__sym if not (d - i) == 0 else ''
+
+                if i == d:
+                    sign = ''
+                elif ai < 0:
+                    sign = ' - '
                 else:
-                    s += f' {sign} {abs(self.coef[i])} {self.sym}**{self.degree - i}'
-        return s
-    
+                    sign = ' + '
+
+                res += coef + s + n + sign
+
+        return res
+
+    def polyder(self, n: int) -> Poly:
+        return Poly(polyder(self.coefficients, n))
+
     def copy(self):
-        return Polynomial(self.coef)
+        return Poly(self.coefficients)
 
-    def polyder(self, n: int) -> Polynomial:
-        return Polynomial(polyder(self.coef, n))
-    
     def roots(self):
-        return root(self.coef)
+        return root(self.coefficients)
     
-    def trim(self, tol=0):
-        return Polynomial(self.coef[1:] if self.coef[0] <= tol else self.coef)
-    
-    def cutdeg(self, deg):
-        if deg > self.degree:
-            return self.copy()
-        else:
-            return Polynomial(self.coef[self.degree - deg:])
+    def compute(self, x: tuple=None):
+        if not x:
+            delx = (self.__interval[1] - self.__interval[0]) / 10
+            x = [self.__interval[0] + delx * i for i in range(11)]
+        return [(xi, self(xi)) for xi in x]
+
+
+class CubicSpline:
+
+    def __init__(self, knots: list) -> None:
+        self.__knots = knots
+        self.__poly = []
+        self.__coef = _coef_gen(knots)
+        
+        for i in range(0, 4 * (len(self.__knots) - 1), 4):
+            self.__poly.append(Poly(self.__coef[i:i+4]))
+        
+        for k in range(len(self.__knots) - 1):
+            self.__poly[k].interval = (self.__knots[k][0], self.__knots[k + 1][0])
+
+    @property
+    def knots(self):
+        return self.__knots
+
+    @property
+    def poly(self):
+        return self.__poly

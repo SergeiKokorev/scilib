@@ -2,32 +2,6 @@ import numpy as np
 
 from linalg import inverse, mult, add, norm, sub
 
-<<<<<<< HEAD
-from inspect import signature
-
-
-from linalg import inverse, mult, add, norm, transpose, sub, solve
-from utils import mean_squared_error, diag
-
-
-class gardient:
-
-    def __init__(self, algoryth: str) -> None:
-        self.__alg: str
-
-    def __new__(cls, *args, **kwargs):
-        pass
-
-
-class optimize:
-
-    def __init__(self):
-        self.__alg: object
-
-    def set_alg(self, algorythm: object):
-        pass
-
-=======
 
 def sor(A, b, x0, omega=1, tol=1e-8, max_iter=800):
 
@@ -70,7 +44,6 @@ def sor(A, b, x0, omega=1, tol=1e-8, max_iter=800):
         return xsol
     else:
         return sor(A, b, xsol, omega, tol, max_iter - 1)
->>>>>>> 527f024e8606019cbc5480276add1c83a445fff3
 
 
 def polyder(x:float, p:list, n:int) -> float:
@@ -399,49 +372,6 @@ def curve_fit(f, xdata, ydata, p0=None, jac=None, lam0=10, est=1e-6, max_iter=80
         raise RuntimeError("Maximum number of iterations esceeded. No solution found")
 
 
-<<<<<<< HEAD
-def grad_desc(f, xdata, ydata, p0=None, jac=None, teta=0.001, est=1e-6, max_iter=10):
-
-    if max_iter == 0:
-        raise RuntimeError("Maximum number of iterations exceeded. No solution found.")
-
-    n = len(xdata)
-    m = len(ydata)
-    nargs = len(signature(f).parameters) - 1
-    popt = p0 if p0 else [1.0 for i in range(nargs)]
-    darg = [1e-3 for i in range(nargs)]
-
-    if n != m:
-        raise RuntimeError("Size of xdata and ydata must be equal.")
-    
-    # Compute Jacobian matrix
-    jacobian = [[0.0 for col in range(nargs)] for row in range(n)]
-    if not jac:
-        for row in range(n):
-            for col in range(nargs):
-                arg1 = [popt[k] + darg[k] if col == k else popt[k] for k in range(nargs)]
-                arg2 = [popt[k] - darg[k] if col == k else popt[k] for k in range(nargs)]
-                jacobian[row][col] = (f(xdata[row], *arg1) - f(xdata[row], *arg2)) / (2 * darg[col])
-    else:
-        for row in range(n):
-            jacobian = jac(xdata[row], *popt)
-
-    # Compute step size
-    jacobian_t = transpose(jacobian)
-    jacobian = mult(teta, jacobian)
-    jac_sqrd = inverse(mult(jacobian_t, jacobian))
-
-    step = mult(jacobian_t, mult([yi - f(xi, *popt) for xi, yi in zip(xdata, ydata)], jac_sqrd))
-    print(step)
-    popt_new = [p + dp for p, dp in zip(popt, step)]
-    rms = mean_squared_error(ydata, [f(xi, *popt_new) for xi in xdata])
-
-    if rms <= est:
-        return popt
-    else:
-        return grad_desc(f, xdata, ydata, popt_new, jac, teta, est, max_iter-1)
-
-=======
 def bisect(f, a, b, args=(), tol=1e-12, maxiter=800):
 
     if maxiter == 0:
@@ -458,4 +388,3 @@ def bisect(f, a, b, args=(), tol=1e-12, maxiter=800):
         return bisect(f, m, b, args, tol, maxiter - 1)
     elif np.sign(f(b, *args)) == np.sign(f(m, *args)):
         return bisect(f, a, m, args, tol, maxiter - 1)
->>>>>>> 527f024e8606019cbc5480276add1c83a445fff3
