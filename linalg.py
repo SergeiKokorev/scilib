@@ -415,7 +415,7 @@ def gaussian(A, b, copy=True):
 
 
 def lu(a: list) -> tuple:
-    
+
     '''
         Computes LU decomposition of a matrix with partial pivoting
         ----------------------------------------------------------
@@ -442,24 +442,23 @@ def lu(a: list) -> tuple:
     P = identity(n)
     U = deepcopy(a)
 
-    for j in range(n):
+    for i in range(n):
 
-        k = max(range(j, n), key=lambda i: abs(U[i][j]))
-    
-        if j != 0:
-            for i in range(j, n):
-                L[i][j - 1], L[k][j - 1] = L[k][j - 1], L[i][j - 1]
-
+        id_max = max(range(i, n), key=lambda k: abs(U[k][i]))
+        
         I = identity(n)
-        I[j], I[k] = I[k], I[j]
+        I[i], I[id_max] = I[id_max], I[i]
+        U[id_max], U[i] = U[i], U[id_max]
         P = mult(P, I)
-        U[j], U[k] = U[k], U[j]
-        pivot = U[j][j]
-        for i in range(j + 1, n):
-            alfa = U[i][j] / pivot
-            for k in range(j, n):
-                U[i][k] -= U[j][k] * alfa
-            L[i][j] = alfa
+        L = mult(I, mult(L, I))
+
+        pivot = U[i][i]
+        for j in range(i + 1, n):
+            c = U[j][i] / pivot
+
+            for k in range(i, n):
+                U[j][k] = U[j][k] - c * U[i][k]
+                L[j][k] = L[j][k] + c * L[i][k]
 
     return P, L, U
 
