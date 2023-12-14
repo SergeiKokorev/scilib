@@ -1,6 +1,11 @@
 import numpy as np
 
-from linalg import inverse, mult, add, norm, sub
+from copy import deepcopy
+
+from linalg import (
+    inverse, mult, add, norm, sub,
+    transpose
+)
 
 
 def sor(A, b, x0, omega=1, tol=1e-8, max_iter=800):
@@ -388,3 +393,44 @@ def bisect(f, a, b, args=(), tol=1e-12, maxiter=800):
         return bisect(f, m, b, args, tol, maxiter - 1)
     elif np.sign(f(b, *args)) == np.sign(f(m, *args)):
         return bisect(f, a, m, args, tol, maxiter - 1)
+
+
+def gauss_newton(f, xdata, ydata, p0, tol=1e-8, max_iter=100):
+
+    def residual(x, y, args):
+        return (y - f(x, *args))
+
+    popt = p0.copy()
+    m = len(ydata)
+    n = len(popt)
+    x = xdata.copy()
+    y = ydata.copy()
+    delp = 1e-6
+    
+    if max_iter == 0:
+        raise RuntimeError('Maximum number of interations exceeded. No solution found.')
+
+    jac = [[0.0 for j in range(n)] for i in range(m)]
+
+    for i in range(m):
+        for j in range(n):
+            args1 = [popt[k] + delp if k == j else popt[k] for k in range(n)]
+            args2 = [popt[k] - delp if k == j else popt[k] for k in range(n)]
+            jac[i][j] = (residual(x[i], y[i], args1) - residual(x[i], y[i], args2)) / (2 * delp)
+
+    jac_t = transpose(jac)
+    r_popt = [residual(xi, yi, popt) for xi, yi in zip(x, y)]
+
+    A = mult(jac_t, jac)
+    b = mult(mult(-1, jac_t), r_popt)
+    x = mult(inverse(A), b)
+    
+    popt_new = add(x, popt)
+    r = [residual(xi, yi, popt_new) for xi, yi in zip(xdata, ydata)]
+    s = sum([(p1 - p2) ** 2 for p1, p2 in zip(popt, popt_new)])
+
+    if s <= tol:
+        return popt_new
+    else:
+        return gauss_newton(f, xdata, ydata, popt_new, tol, max_iter - 1)
+
