@@ -466,6 +466,38 @@ def gauss_newton(f, xdata, ydata, p0=None, tol=1e-8, max_iter=100):
 
 def lm(f, xdata, ydata, p0=None, jac=None, lam0=10, tol=1e-6, max_iter=800):
     
+    '''
+        Use non-linear least squares to fit a function, f, to data
+        using Levenberg-Marquardt method
+        ----------------------------------------------------------
+        Parameters:     f : callable
+                            The model function, f(x, ...). It must take the independent variable
+                            as the first argument and the parameters to fit as separate remaining
+                            arguments.
+                        xdata : array_like
+                            The independent varialbe where the data is measured, a length M
+                        ydata : array_like
+                            The dependent data, a length M array.
+                        p0 : array_like, optional
+                            Initial guess for the parameters (length N). If None, then the
+                            initial values will all be 1 (if the number of parameters for the 
+                            function can be determined using introspection, otherwise a ValueError
+                            is raised).
+                        jac : callable, optional
+                            Function with signature jac(x, ...) which computes the Jacobian matrix
+                            of the model function with respect to parameters. If None (default), 
+                            the Jacobian will be estimated numerically
+                        lam0 : float, optional
+                            Initial damping factor. Default 10.
+                        tol : float, optional
+                            Determines the tolerance in residual of optimal parameters. Default 1e-8
+                        max_iter : int, optional
+                            Maximum number of iterations. Default 800.
+        Return:         popt : array
+                            Optimal values for parameters so that the sum of the squared residuals of
+                            f(xdata, *popt) - ydata is minimized
+    '''
+
     def residual(x, y, args):
         res = []
         for xi, yi in zip(x, y):
