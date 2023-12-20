@@ -1,10 +1,10 @@
 import numpy as np
+from inspect import signature
 
-from copy import deepcopy
 
 from linalg import (
     inverse, mult, add, norm, sub,
-    transpose
+    transpose, diag
 )
 
 
@@ -395,10 +395,40 @@ def bisect(f, a, b, args=(), tol=1e-12, maxiter=800):
         return bisect(f, a, m, args, tol, maxiter - 1)
 
 
-def gauss_newton(f, xdata, ydata, p0, tol=1e-8, max_iter=100):
+def gauss_newton(f, xdata, ydata, p0=None, tol=1e-8, max_iter=100):
+
+    '''
+        Use non-linear least squares to fit a function, f, to data
+        using Gauss-Newton method
+        ----------------------------------------------------------
+        Parameters:     f : callable
+                            The model function, f(x, ...). It must take the independent variable
+                            as the first argument and the parameters to fit as separate remaining
+                            arguments.
+                        xdata : array_like
+                            The independent varialbe where the data is measured, a length M
+                        ydata : array_like
+                            The dependent data, a length M array.
+                        p0 : array_like, optional
+                            Initial guess for the parameters (length N). If None, then the
+                            initial values will all be 1 (if the number of parameters for the 
+                            function can be determined using introspection, otherwise a ValueError
+                            is raised).
+                        tol : float, optional
+                            Determines the tolerance in residual of optimal parameters. Default 1e-8
+                        max_iter : int, optional
+                            Maximum number of iterations. Default 800.
+        Return:         popt : array
+                            Optimal values for parameters so that the sum of the squared residuals of
+                            f(xdata, *popt) - ydata is minimized
+    '''
 
     def residual(x, y, args):
         return (y - f(x, *args))
+
+    if not p0:
+        n = len(signature(f).parameters) - 1
+        p0 = [1.0 for i in range(n)]
 
     popt = p0.copy()
     m = len(ydata)
@@ -426,7 +456,6 @@ def gauss_newton(f, xdata, ydata, p0, tol=1e-8, max_iter=100):
     x = mult(inverse(A), b)
     
     popt_new = add(x, popt)
-    r = [residual(xi, yi, popt_new) for xi, yi in zip(xdata, ydata)]
     s = sum([(p1 - p2) ** 2 for p1, p2 in zip(popt, popt_new)])
 
     if s <= tol:
@@ -434,3 +463,59 @@ def gauss_newton(f, xdata, ydata, p0, tol=1e-8, max_iter=100):
     else:
         return gauss_newton(f, xdata, ydata, popt_new, tol, max_iter - 1)
 
+
+def lm(f, xdata, ydata, p0=None, jac=None, lam0=10, tol=1e-6, max_iter=800):
+    
+    def residual(x, y, args):
+        res = []
+        for xi, yi in zip(x, y):
+            res.append(yi - f(xi, *args))
+        return res
+
+    if max_iter == 0:
+        raise RuntimeError('Maximum number of interations exceeded. No solution fouond')
+
+    if not p0:
+        try:
+            n = len(signature(f).parameters) - 1
+            p0 = [1.0 for i in range(n)]
+        except ValueError:
+            raise ValueError('Incompatible optimization parameters are used.')
+
+    popt = p0.copy()
+    m = len(ydata)
+    n = len(popt)
+    x = xdata.copy()
+    y = ydata.copy()
+    delp = 1e-6
+
+    if not jac:
+        jacobian = [[0.0 for j in range(n)] for i in range(m)]
+        for i in range(m):
+            for j in range(n):
+                p1 = [popt[k] + delp if k == j else popt[k] for k in range(n)]
+                p2 = [popt[k] - delp if k == j else popt[k] for k in range(n)]
+                jacobian[i][j] = (f(x[i], *p1) - f(x[i], *p2)) / (2 * delp)
+    else:
+        jacobian = jac(x, *popt)
+
+    jt = transpose(jacobian)
+    jtj = mult(jt, jacobian)
+    jdiag = diag(jtj)
+    A = add(jtj, mult(lam0, jdiag))
+    b = mult(jt, residual(x, y, popt))
+    delta = mult(inverse(A), b)
+
+    popt_new = add(delta, popt)
+
+    rms = (sum([p ** 2 for p in residual(x, y, popt)]) ** 0.5) / m
+    rms_new = (sum([p ** 2 for p in residual(x, y, popt_new)]) ** 0.5) / m
+
+    es = abs(rms - rms_new) / rms
+
+    if es <= tol:
+        return popt_new
+    elif rms_new > rms:
+        return lm(f, xdata, ydata, popt_new, jac, lam0*10, tol, max_iter-1)
+    else:
+        return lm(f, xdata, ydata, popt_new, jac, lam0/10, tol, max_iter-1)
