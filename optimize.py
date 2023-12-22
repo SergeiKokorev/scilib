@@ -551,3 +551,8 @@ def lm(f, xdata, ydata, p0=None, jac=None, lam0=10, tol=1e-6, max_iter=800):
         return lm(f, xdata, ydata, popt_new, jac, lam0*10, tol, max_iter-1)
     else:
         return lm(f, xdata, ydata, popt_new, jac, lam0/10, tol, max_iter-1)
+
+
+def polyfit(xdata, ydata, order=1, p0=None, lam0=10, est=1e-6, max_iter=800):
+
+    pass

@@ -9,7 +9,7 @@ from utils import (
 
 def zeros(size: tuple | int):
     if hasattr(size, '__iter__'):
-        return [[0.0 for i in range(size[0])] for j in range(size[1])]
+        return [[0.0 for i in range(size[1])] for j in range(size[0])]
     elif isinstance(size, int):
         return [0.0 for i in range(size)]
     else:
@@ -89,19 +89,23 @@ def dot(m1: list, m2: list) -> float | bool:
     '''
         Returns dot product of two matrices or vectors
     '''
-    if not hasattr(m1) or not hasattr(m2):
-        raise TypeError('Arguments has to iterable')
-
-    if len(m1) != len(m2):
-        raise ValueError('Shapes of matrices not aligned')
-    
-    if isinstance(m1[0], float | int) and isinstance(m1[0], float | int):
+    if hasattr(m1, '__iter__') and hasattr(m1[0], '__iter__') and isinstance(m2, (float, int)):
+        return [[m1i * m2 for m1i in m1j] for m1j in m1]
+    elif isinstance(m1, (float, int)) and hasattr(m2, '__iter__') and hasattr(m2[0], '__iter__'):
+        return [[m2i * m1 for m2i in m2j] for m2j in m2]
+    elif isinstance(m1[0], (float, int)) and hasattr(m2, '__iter__') and hasattr(m2[0], '__iter__'):
+        return [dot(m1, m2t) for m2t in transpose(m2)]
+    elif hasattr(m1[0], '__iter__') and isinstance(m2[0], (float, int)):
+        return [dot(m1i, m2) for m1i in m1]
+    elif isinstance(m1[0], (float, int)) and isinstance(m1[0], (float, int)):
         return sum([m1i * m2i for m1i, m2i in zip(m1, m2)])
     elif hasattr(m1[0], '__iter__') and hasattr(m2[0], '__iter__'):
         res = 0.0
         for m1i, m2i in zip(m1, m2):
             res += sum(m1ij * m2ij for (m1ij, m2ij) in zip(m1i, m2i))
         return res
+    else:
+        RuntimeError('Unsupported variables for applying dor product')
 
 
 def mult(m1: list | float, m2: list | float) -> list:
@@ -461,6 +465,31 @@ def lu(a: list) -> tuple:
                 L[j][k] = L[j][k] + c * L[i][k]
 
     return P, L, U
+
+
+def arnoldi(A, b, n, eps=1e-12):
+
+    h = zeros((n + 1, n))
+    Q = zeros((len(A), n + 1))
+    
+    normb = norm(b)
+    for i in range(len(A)):
+        Q[i][0] = b[i] / normb
+
+    for k in range(1, n + 1):
+        q = [q[k - 1] for q in Q]
+        v = dot(A, q)
+        for j in range(k):
+            qj = [q[j] for q in Q]
+            h[j][k - 1] = dot(qj, v)
+            v = [vi - h[j][k - 1] * qij for qij, vi in zip(qj, v)]
+        h[k][k - 1] = norm(v)
+
+        if h[k][k - 1] > eps:
+            for i in range(len(A)):
+                Q[i][k] = v[i] / h[k][k - 1]
+        else:
+            return Q, h
 
 
 def qr(m: list) -> tuple:
