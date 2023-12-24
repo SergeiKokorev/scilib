@@ -58,6 +58,28 @@ def distance(v1: list, v2: list) -> float:
     return sum([(v1i - v2i) ** 2 for v1i, v2i in zip(v1, v2)]) ** 0.5
 
 
+def conj(a):
+    
+    if any([isinstance(ai, complex) for ai in a]):
+        try:
+            a = [complex(ai.real, ai.imag) for ai in a]
+        except ValueError as er:
+            raise(f'Unsupported type for conjugation.')
+    elif all([isinstance(ai, (float, int)) for ai in a]):
+        return a
+
+    if isinstance(a, complex):
+        return complex(a.real, (-1) * a.imag)
+    elif hasattr(a, '__iter__') and all([isinstance(ai, complex) for ai in a]):
+        return [complex(ai.real, (-1) * ai.imag) for ai in a]
+    elif hasattr(a, '__iter__') and all([isinstance(ai, (float, int)) for ai in a]):
+        return a
+    elif hasattr(a, '__iter__') and hasattr(a[0], '__iter__'):
+        return [conj(ai) for ai in a]
+    else:
+        TypeError(f'Unsupported type for conjugation. Expected (float, int, complex). Given {type(a)}')
+
+
 def transpose(m: list, copy: bool = False) -> list:
 
     '''
@@ -481,7 +503,7 @@ def arnoldi(A, b, n, eps=1e-12):
         v = dot(A, q)
         for j in range(k):
             qj = [q[j] for q in Q]
-            h[j][k - 1] = dot(qj, v)
+            h[j][k - 1] = dot(conj(qj), v)
             v = [vi - h[j][k - 1] * qij for qij, vi in zip(qj, v)]
         h[k][k - 1] = norm(v)
 
@@ -490,6 +512,7 @@ def arnoldi(A, b, n, eps=1e-12):
                 Q[i][k] = v[i] / h[k][k - 1]
         else:
             return Q, h
+    return Q, h
 
 
 def qr(m: list) -> tuple:
