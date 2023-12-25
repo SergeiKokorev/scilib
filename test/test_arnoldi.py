@@ -7,7 +7,7 @@ DIR = os.path.abspath(os.path.join(
 ))
 sys.path.append(DIR)
 
-from linalg import arnoldi, conj
+from linalg import arnoldi, conj, dot
 
 
 
@@ -21,14 +21,16 @@ if __name__ == "__main__":
 
     b = [1, 2, 3]
 
-    a_conj = conj(A)
-
-    Q, h = arnoldi(A, b, 1)
+    Q, H = arnoldi(A, b, 2)
 
     print('Q')
     for q in Q:
-        print(q)
+        print([round(qi, 2) for qi in q])
 
-    print('h')
-    for hi in h:
-        print(hi)
+    print('H')
+    for h in H:
+        print([round(hi, 2) for hi in h])
+
+    print('Dot')
+    print(dot(Q, H))
+    

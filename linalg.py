@@ -7,7 +7,19 @@ from utils import (
 )
 
 
+def vstack(m: list, v: list):
+    if len(m) == 0:
+        for vi in v:
+            m.append([vi])
+    else:
+        for i, vi in enumerate(v):
+            m[i].append(vi)
+
+
 def zeros(size: tuple | int):
+    '''
+        size : tuple(row, col)
+    '''
     if hasattr(size, '__iter__'):
         return [[0.0 for i in range(size[1])] for j in range(size[0])]
     elif isinstance(size, int):
@@ -106,28 +118,43 @@ def transpose(m: list, copy: bool = False) -> list:
     return res
 
 
-def dot(m1: list, m2: list) -> float | bool:
+def dot(m1, m2) -> float | bool:
 
     '''
         Returns dot product of two matrices or vectors
+        ----------------------------------------------
+        Parameters      m1 : array_like | float
+                            array_like size of (n x m) or float
+                        m2 : array_like | float
+                            array_like size of (m x k) of float
+        Returns         res : array_like | float
     '''
-    if hasattr(m1, '__iter__') and hasattr(m1[0], '__iter__') and isinstance(m2, (float, int)):
-        return [[m1i * m2 for m1i in m1j] for m1j in m1]
-    elif isinstance(m1, (float, int)) and hasattr(m2, '__iter__') and hasattr(m2[0], '__iter__'):
-        return [[m2i * m1 for m2i in m2j] for m2j in m2]
-    elif isinstance(m1[0], (float, int)) and hasattr(m2, '__iter__') and hasattr(m2[0], '__iter__'):
-        return [dot(m1, m2t) for m2t in transpose(m2)]
-    elif hasattr(m1[0], '__iter__') and isinstance(m2[0], (float, int)):
-        return [dot(m1i, m2) for m1i in m1]
-    elif isinstance(m1[0], (float, int)) and isinstance(m1[0], (float, int)):
-        return sum([m1i * m2i for m1i, m2i in zip(m1, m2)])
-    elif hasattr(m1[0], '__iter__') and hasattr(m2[0], '__iter__'):
-        res = 0.0
-        for m1i, m2i in zip(m1, m2):
-            res += sum(m1ij * m2ij for (m1ij, m2ij) in zip(m1i, m2i))
-        return res
+    if isinstance(m1, (float, int)) and isinstance(m2, (float, int)):
+        return m1 * m2
+    elif isinstance(m1, (float, int)) and hasattr(m2, '__iter__'):
+        if all([isinstance(m2i, (float, int)) for m2i in m2]):
+            return [m1 * m2i for m2i in m2]
+        elif all([hasattr(m2i, '__iter__') for m2i in m2]):
+            return [dot(m1, m2i) for m2i in m2]
+    elif hasattr(m1, '__iter__') and isinstance(m2, (float, int)):
+        if all([isinstance(m1i, (float, int)) for m1i in m1]):
+            return [m1i * m2 for m1i in m1]
+        elif all([hasattr(m1i, '__iter__') for m1i in m1]):
+            return [dot(m1i, m2) for m1i in m1]
+    elif hasattr(m1, '__iter__') and hasattr(m2, '__iter__'):
+        if all([isinstance(m1i, (float, int)) for m1i in m1]):
+            if all([isinstance(m2i, (float, int)) for m2i in m2]):
+                return sum([m1i * m2i for m1i, m2i in zip(m1, m2)])
+            elif all([hasattr(m2i, '__iter__') for m2i in m2]):
+                return [dot(m1, m2i) for m2i in transpose(m2, copy=True)]
+        elif all([hasattr(m1i, '__iter__') for m1i in m1]):
+            if all([hasattr(m2i, '__iter__') for m2i in m2]):
+                return [dot(m1i, m2) for m1i in m1]
+            elif all([isinstance(m2i, (float, int)) for m2i in m2]):
+                return [dot(m1i, m2) for m1i in m1]
     else:
-        RuntimeError('Unsupported variables for applying dor product')
+        raise RuntimeError('Unsupported type.')
+
 
 
 def mult(m1: list | float, m2: list | float) -> list:
@@ -489,30 +516,27 @@ def lu(a: list) -> tuple:
     return P, L, U
 
 
-def arnoldi(A, b, n, eps=1e-12):
+def arnoldi(A, b, n=1, eps=1e-12):
 
-    h = zeros((n + 1, n))
-    Q = zeros((len(A), n + 1))
-    
-    normb = norm(b)
-    for i in range(len(A)):
-        Q[i][0] = b[i] / normb
+    m = len(b)
+    Q = zeros((m, n+1))
+    H = zeros((n+1, n))
+    q0 = [bi / norm(b) for bi in b]
+    for i in range(m):
+        Q[i][0] = q0[i]
 
-    for k in range(1, n + 1):
-        q = [q[k - 1] for q in Q]
-        v = dot(A, q)
-        for j in range(k):
-            qj = [q[j] for q in Q]
-            h[j][k - 1] = dot(conj(qj), v)
-            v = [vi - h[j][k - 1] * qij for qij, vi in zip(qj, v)]
-        h[k][k - 1] = norm(v)
-
-        if h[k][k - 1] > eps:
-            for i in range(len(A)):
-                Q[i][k] = v[i] / h[k][k - 1]
-        else:
-            return Q, h
-    return Q, h
+    for i in range(n):
+        qi = [Q[k][i] for k in range(m)]
+        v = dot(A, qi)
+        for j in range(i):
+            qj = [Q[k][j] for k in range(m)]
+            H[j][i] = dot(conj(qj), v)
+            v = sub(v, dot(H[j][i], qj))
+        H[i+1][i] = norm(v)
+        qi = normalize(v)
+        for k in range(m):
+            Q[k][i+1] = qi[k]
+    return Q, H
 
 
 def qr(m: list) -> tuple:
