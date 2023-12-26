@@ -246,9 +246,11 @@ def add(m1: list, m2: list) -> list:
             return [add(m2, m1[i]) for i in range(len(m1))]
     
     if hasattr(m1, '__iter__') and hasattr(m2, '__iter__'):
-        if isinstance(m1[0], int | float) and isinstance(m2[0], int | float):
+        if (all([isinstance(m1i, int | float) for m1i in m1])
+            and all([isinstance(m2i, int | float) for m2i in m2])):
             return [m1i + m2i for m1i, m2i in zip(m1, m2)]
-        elif hasattr(m1[0], '__iter__') and hasattr(m2[0], '__iter__'):
+        elif (all([hasattr(m1i, '__iter__') for m1i in m1])
+              and all([hasattr(m2i, '__iter__') for m2i in m2])):
             return [add(m1[i], m2[i]) for i in range(len(m1))]   
 
 
@@ -256,7 +258,7 @@ def sub(m1: list, m2: list) -> list:
     '''
         Matrix substraction
     '''
-    return add(m1, mult((-1), m2))
+    return add(m1, dot((-1), m2))
 
 
 def upper(m: list, copy: bool = False):
@@ -516,27 +518,82 @@ def lu(a: list) -> tuple:
     return P, L, U
 
 
-def arnoldi(A, b, n=1, eps=1e-12):
+def proj(v, u):
+    '''
+        Returns projection v on u
+    '''
+    return dot(dot(v, u) / dot(u, u), u)
 
-    m = len(b)
-    Q = zeros((m, n+1))
-    H = zeros((n+1, n))
-    q0 = [bi / norm(b) for bi in b]
-    for i in range(m):
-        Q[i][0] = q0[i]
 
-    for i in range(n):
-        qi = [Q[k][i] for k in range(m)]
-        v = dot(A, qi)
-        for j in range(i):
-            qj = [Q[k][j] for k in range(m)]
-            H[j][i] = dot(conj(qj), v)
-            v = sub(v, dot(H[j][i], qj))
-        H[i+1][i] = norm(v)
-        qi = normalize(v)
-        for k in range(m):
-            Q[k][i+1] = qi[k]
-    return Q, H
+def gma(s):
+
+    '''
+        Gram-Schmidt algorithm
+        ----------------------
+        Parameter   s : array_like
+                        Set of vectors
+        Returns     u : array_like
+                        Orthonormal basis
+    '''
+
+    m = len(s)
+    n = len(s[0])
+    u = zeros((m, n))
+    st = transpose(s, copy=True)
+    u[0] = [si for si in st[0]]
+
+    for i in range(1, n):
+        u[i] = sub(st[i], proj(st[i], u[0]))
+        for j in range(1, i):
+            u[i] = sub(u[i], proj(u[i], u[j]))
+    return transpose(u)
+
+
+def arnoldi(A, b, n=1):
+
+    '''
+        Compute a basis of the (n + 1)-Krylov subspace of the matrix A.
+        ---------------------------------------------------------------
+        Parameters
+        ----------
+        A   :   array_like
+                An m x m array
+        b   :   array_like
+                Initial vector (length m)
+        n   :   int
+                One less than the dimension of the Krylov subspace, or equivalently
+                the *degree* of the Krylov space. Must be >= 1
+        Returns
+        -------
+        Q   :   array_like
+                An m x (n + 1) array, where the columns are an orthonormal basis of
+                the the Krylov subspace
+        h   :   array_like
+                An (n + 1) x n array. A on basis Q. It is upper Hessenberg.
+    '''
+
+    eps = 1e-12
+    m = len(A)
+    a = deepcopy(A)
+
+    q = zeros((n+1, m))
+    h = zeros((n, n+1))
+
+    q[0] = normalize([bi for bi in b])
+    
+    for k in range(1, n + 1):
+        q[k] = dot(a, q[k-1])
+        for j in range(k):
+            h[k-1][j] = dot(conj(q[j]), q[k])
+            q[k] = sub(q[k], dot(h[k-1][j], q[j]))
+        h[k-1][k] = norm(q[k])
+        
+        if h[k-1][k] > eps:
+            q[k] = normalize(q[k])
+        else:
+            return transpose(q[:k]), transpose(h[:k])
+    
+    return transpose(q), transpose(h)
 
 
 def qr(m: list) -> tuple:

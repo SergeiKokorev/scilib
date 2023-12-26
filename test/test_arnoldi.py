@@ -10,27 +10,28 @@ sys.path.append(DIR)
 from linalg import arnoldi, conj, dot
 
 
-
 if __name__ == "__main__":
 
     A = [
-        [1, 2, 3],
-        [4, 5, 6],
-        [7, 8, 9]
+        [1, 2, 3, 7],
+        [4, 5, 6, 8],
+        [7, 8, 9, 12],
+        [12, 11, 8, 7]
     ]
 
-    b = [1, 2, 3]
+    b = [1, 2, 3, 7]
 
-    Q, H = arnoldi(A, b, 2)
+    Q, H = arnoldi(A, b, 3)
 
     print('Q')
     for q in Q:
-        print([round(qi, 2) for qi in q])
+        print([round(qi, 3) for qi in q])
 
-    print('H')
+    print('\nH')
     for h in H:
-        print([round(hi, 2) for hi in h])
+        print([round(hi, 3) for hi in h])
 
-    print('Dot')
-    print(dot(Q, H))
-    
+    print('\nCheck')
+    for a in dot(Q, dot(A, conj(Q))):
+        print([round(ai, 3) for ai in a])
+
