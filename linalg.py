@@ -525,7 +525,7 @@ def proj(v, u):
     return dot(dot(v, u) / dot(u, u), u)
 
 
-def gma(s):
+def gsa(s):
 
     '''
         Gram-Schmidt algorithm
@@ -591,7 +591,7 @@ def arnoldi(A, b, n=1):
         if h[k-1][k] > eps:
             q[k] = normalize(q[k])
         else:
-            return transpose(q[:k]), transpose(h[:k])
+            return transpose(q[:k]), transpose(h[:k])[:k]
     
     return transpose(q), transpose(h)
 
@@ -633,34 +633,44 @@ def qr(m: list) -> tuple:
     return Q, R
 
 
-def __eigvec(a, eigval):
-
-    n = len(a)
-    I = identity(n)
-    m = sub(a, mult(I, eigval))
-    p, l, u = lu(a)
-    v = [0.0 for i in range(n)]
-    v[n - 1] = 1.0
-    for i in range(n - 2, -1, -1):
-        v[i] = (-1) * u[i][i + 1] * v[i + 1] / u[i][i]
-    
-    print(f'{eigval =}, {normalize(v) = }')
-    return normalize(v)
-
-
 def eig(a):
+
+    '''
+    Compute the eigenvalues and eigenvectors of a square matrix array
+
+    Parameters
+    ----------
+    a : array_like size of m x m
+        Matrices for which the eigenvalues and eigenvectors will be
+        computed
+    
+    Returns
+    -------
+    eigval : array_like size of m
+            The eigenvalues
+    eigvec : array_like size of m x m
+            The normalized eigenvectors, such that the column ``eigenvectors[:][i]``
+            is the eigenvector corresponding to the eigenvalue ``eigenvalue[i]``
+
+    Raises
+    ------
+    RuntimeError
+        If the eigenvalue computation does not converge
+    '''
 
     m = deepcopy(a)
     for i in range(800):
         if all([abs(m[i][j]) < 1e-10 for i in range(1, len(m)) for j in range(i)]):
 
             eigval = [m[i][i] for i in range(len(m))]
-            eigvect = q
-            rhs = mult(identity(len(a)), m[0][0])
-            lhs = sub(a, rhs)
-            p, l, u = lu(lhs)
-            print(u)
-            return (eigval, eigvect)
+            I = identity(len(m))
+            eigvec = []
+            rhs = [0.0 for i in range(len(m) - 1)]
+            rhs.append(1)
+            for lam in eigval:
+                lhs = sub(a, dot(lam, I))
+                eigvec.append(normalize(solve(lhs, rhs)))
+            return (eigval, transpose(eigvec))
         else:
             q, r = qr(m)
             m = mult(mult(transpose(q, copy=True), m), q)

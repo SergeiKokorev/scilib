@@ -1,13 +1,17 @@
 import os
 import sys
 
+
+import numpy.linalg as linalg
+
+
 DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__),
     os.pardir
 ))
 sys.path.append(DIR)
 
-from linalg import arnoldi, conj, dot
+from linalg import arnoldi,dot, transpose, eig
 
 
 if __name__ == "__main__":
@@ -21,7 +25,7 @@ if __name__ == "__main__":
 
     b = [1, 2, 3, 7]
 
-    Q, H = arnoldi(A, b, 3)
+    Q, H = arnoldi(A, b, 4)
 
     print('Q')
     for q in Q:
@@ -31,7 +35,6 @@ if __name__ == "__main__":
     for h in H:
         print([round(hi, 3) for hi in h])
 
-    print('\nCheck')
-    for a in dot(Q, dot(A, conj(Q))):
-        print([round(ai, 3) for ai in a])
-
+    print('\nCheck. A = QHQ*')
+    for q in dot(Q, dot(H, transpose(Q))):
+        print([round(qi, 3) for qi in q])
