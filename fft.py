@@ -3,7 +3,45 @@ from __future__ import annotations
 import math
 
 from typing import List
+from dataclasses import dataclass
 
+
+@dataclass
+class FFT:
+
+    signal: List[ComplexNumber]
+    frequency: List[ComplexNumber] = None
+    phase: list = None
+    amplitude: list = None
+    real: list = None
+    imag: list = None
+
+    def compute_fft(self):
+        self.frequency = fft1(self.signal)
+        self.amplitude = [(cn.real ** 2 + cn.imag ** 2) for cn in self.frequency]
+        self.phase = [math.atan2(cn.imag, cn.real) for cn in self.frequency]
+        self.real = [cn.real for cn in self.frequency]
+        self.imag = [cn.imag for cn in self.frequency]
+
+    def __round__(self, ndigits=0):
+        out = '[ '
+        for i, f in enumerate(self.frequency):
+            if i % 2 == 0 and i != 0:
+                out += f'\n{round(f, ndigits)}\t'
+            else:
+                out += f'{round(f, ndigits)}\t'
+        out += ' ]'
+        return out
+
+    def __str__(self):
+        out = '[ '
+        for i, f in enumerate(self.frequency):
+            if i % 2 == 0 and i != 0:
+                out += f'\n{str(f)}\t'
+            else:
+                out += f'{str(f)}\t'
+            out += ']'
+        return out
 
 class ComplexNumber:
 
@@ -29,8 +67,6 @@ class ComplexNumber:
 
     @classmethod
     def exp(cls, teta: float) -> ComplexNumber:
-        # print(f'exp(teta) {teta = } = ({math.cos(teta) = }, {math.sin(teta) = })')
-        # print(f'{round(ComplexNumber(math.cos(teta), math.sin(teta)), 3) = }')
         return ComplexNumber(math.cos(teta), math.sin(teta))
 
     def conjugate(self):
@@ -105,15 +141,15 @@ class ComplexNumber:
 
     def __round__(self, ndigits=0):
         if self.imag >= 0:
-            return f"({round(self.real, ndigits)} + {round(self.imag, ndigits)}j)"
+            return f"{round(self.real, ndigits)} + {round(self.imag, ndigits)}j"
         else:
-            return f"({round(self.real, ndigits)} - {abs(round(self.imag, ndigits))}j)"
+            return f"{round(self.real, ndigits)} - {abs(round(self.imag, ndigits))}j"
 
     def __str__(self):
         if self.imag >= 0:
-            return f"({self.real} + {self.imag}j)"
+            return f"{self.real} + {self.imag}j"
         else:
-            return f"({self.real} - {abs(self.imag)}j)"
+            return f"{self.real} - {abs(self.imag)}j"
 
 def fft1(xin: List(float | complex | ComplexNumber)) -> List(ComplexNumber):
 
@@ -155,3 +191,5 @@ def fft1(xin: List(float | complex | ComplexNumber)) -> List(ComplexNumber):
         xout[k + n//2] = even - rate * odd
 
     return xout
+
+
