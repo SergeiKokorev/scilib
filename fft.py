@@ -5,7 +5,7 @@ import math
 from typing import List
 
 
-def fft1(xin: List(float | complex | ComplexNumber)) -> List[ComplexNumber | complex | float]:
+def fft1(xin: List(float | complex)) -> List[complex | float]:
 
     '''
     Performs the Fast Fourier Transform (FFT) for a given signal.
@@ -35,9 +35,9 @@ def fft1(xin: List(float | complex | ComplexNumber)) -> List[ComplexNumber | com
     for k in range(n//2):
 
         even = sum([xi * ComplexNumber.exp(-2 * math.pi * k * m / (n // 2))
-        for m, xi in enumerate(xin[0::2])])
+                    for m, xi in enumerate(xin[0::2])])
         odd = sum([xi * ComplexNumber.exp(-2 * math.pi * k * m / (n // 2))
-        for m, xi in enumerate(xin[1::2])])
+                    for m, xi in enumerate(xin[1::2])])
 
         rate = ComplexNumber.exp(-2 * math.pi * k / n)
 
@@ -47,12 +47,52 @@ def fft1(xin: List(float | complex | ComplexNumber)) -> List[ComplexNumber | com
     return xout
 
 
+def window(n: int, w: str = 'ham'):
+    '''
+    Computes window functions
+    =========================
+
+    Parametrs
+    ---------
+    n : int
+        Window length
+    w : str, optional
+        Type of window function. Avaible values:
+            'ham' : Hamming's window
+            'han' : Hanning's window
+            'bar' : Barlett's window
+            'blk' : Blackman's window
+    
+    Returns
+    -------
+    win : list
+        Returns list of window functions
+    '''
+    win = []
+    for j in range(n):
+        if j <= n / 8 or j >= 7 * n / 8:
+            match w:
+                case 'ham':
+                    win.append(0.54 - 0.46 * math.cos(8 * math.pi * j / n))
+                case 'han':
+                    win.append(0.5 * (1- math.cos(8 * math.pi * j / n)))
+                case 'bar':
+                    win.append(8 * j / n if j <= n /8 else 8 * (1 - j / n))
+                case 'blk':
+                    win.append(0.42 - 0.5 * math.cos(8 * math.pi * j / n) \
+                               + 0.08 * (16 * math.pi * j / n))
+        else:
+            win.append(1)
+    
+    return win
+
+
 class FFT:
 
     def __init__(self, signal: List[ComplexNumber | complex | float]):
 
-        self.__signal = signal
-        self.__frequency = fft1(self.signal)
+        self.__signal = signal.copy()
+        self.__frequency = []
 
     @property
     def signal(self):
@@ -73,19 +113,29 @@ class FFT:
     
     @property
     def real(self):
+        if not self.__frequency : self.__frequency = fft1(self.__signal)
         return [f.real for f in self.frequency]
     
     @property
     def imag(self):
+        if not self.__frequency : self.__frequency = fft1(self.__signal)
         return [f.imag for f in self.frequency]
     
     @property
     def phase(self):
+        if not self.__frequency : self.__frequency = fft1(self.__signal)
         return [math.atan2(cn.imag, cn.real) for cn in self.frequency]
     
     @property
     def amplitute(self):
-        return [(cn.real ** 2 + cn.imag ** 2) ** 0.5 for cn in self.frequency]
+        if not self.__frequency : self.__frequency = fft1(self.__signal)
+        return [d ** 0.5 for d in self.density]
+
+    @property
+    def density(self):
+        if not self.__frequency : self.__frequency = fft1(self.__signal)
+        d = [abs(f) ** 2 for f in self.__frequency]
+        return [d[i] if i == 0 else 2 * d[i] for i in range(len(d))]
 
     @classmethod
     def freq(cls, n: int, d: float = 1.0) -> List[float]:
@@ -119,7 +169,15 @@ class FFT:
                 fs[int((n - 1) / 2 + i)] = freqs[i]
         return fs
 
+    @classmethod
+    def window(cls, signal: List[complex | float], w: str = 'ham') -> list[complex | float]:
+        return [sj * wj for sj, wj in zip(signal, window(len(signal), w))]
+
+    def compute(self):
+        self.__frequency = fft1(self.signal)
+
     def __round__(self, ndigits=0):
+        if not self.__frequency : self.__frequency = fft1(self.__signal)
         return [round(f, ndigits) for f in self.frequency]
 
     def __str__(self):

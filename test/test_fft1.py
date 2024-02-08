@@ -37,6 +37,7 @@ if __name__ == "__main__":
 
     yf = fft(y)
     ym = fft1(y)
+    ym.compute()
     
     for k, (y1, y2) in enumerate(zip(yf, ym.frequency)):
         print(f'{k}\t:\t{np.round(y1, 4)}\t:\t{round(y2, 4)}')
