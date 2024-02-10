@@ -3,9 +3,10 @@ from __future__ import annotations
 import math
 
 from typing import List
+from copy import deepcopy
 
 
-def fft1(xin: List(float | complex)) -> List[complex | float]:
+def fft(signal: List(float | complex)) -> List[complex | float]:
 
     '''
     Performs the Fast Fourier Transform (FFT) for a given signal.
@@ -14,7 +15,7 @@ def fft1(xin: List(float | complex)) -> List[complex | float]:
     Parameters:
     -----------
 
-    xin:     array_like
+    signal:     array_like
         List of complex numbers. The input signal to be transformed.
     
     Returns:
@@ -25,21 +26,21 @@ def fft1(xin: List(float | complex)) -> List[complex | float]:
     
     '''
 
-    n = len(xin)
+    n = len(signal)
     
     if n % 2 != 0:
-        raise RuntimeError(f'Algorithm fft1 assumes N is a power of 2')
+        raise RuntimeError(f'Algorithm fft assumes N is a power of 2')
 
     xout = [0.0 for i in range(n)]
 
     for k in range(n//2):
 
-        even = sum([xi * ComplexNumber.exp(-2 * math.pi * k * m / (n // 2))
-                    for m, xi in enumerate(xin[0::2])])
-        odd = sum([xi * ComplexNumber.exp(-2 * math.pi * k * m / (n // 2))
-                    for m, xi in enumerate(xin[1::2])])
+        even = sum([xi * Complex.exp(-2 * math.pi * k * m / (n // 2))
+                    for m, xi in enumerate(signal[0::2])])
+        odd = sum([xi * Complex.exp(-2 * math.pi * k * m / (n // 2))
+                    for m, xi in enumerate(signal[1::2])])
 
-        rate = ComplexNumber.exp(-2 * math.pi * k / n)
+        rate = Complex.exp(-2 * math.pi * k / n)
 
         xout[k] = even + rate * odd
         xout[k + n//2] = even - rate * odd
@@ -47,95 +48,42 @@ def fft1(xin: List(float | complex)) -> List[complex | float]:
     return xout
 
 
-def window(n: int, w: str = 'ham'):
-    '''
-    Computes window functions
-    =========================
-
-    Parametrs
-    ---------
-    n : int
-        Window length
-    w : str, optional
-        Type of window function. Avaible values:
-            'ham' : Hamming's window
-            'han' : Hanning's window
-            'bar' : Barlett's window
-            'blk' : Blackman's window
-    
-    Returns
-    -------
-    win : list
-        Returns list of window functions
-    '''
-    win = []
-    for j in range(n):
-        if j <= n / 8 or j >= 7 * n / 8:
-            match w:
-                case 'ham':
-                    win.append(0.54 - 0.46 * math.cos(8 * math.pi * j / n))
-                case 'han':
-                    win.append(0.5 * (1- math.cos(8 * math.pi * j / n)))
-                case 'bar':
-                    win.append(8 * j / n if j <= n /8 else 8 * (1 - j / n))
-                case 'blk':
-                    win.append(0.42 - 0.5 * math.cos(8 * math.pi * j / n) \
-                               + 0.08 * (16 * math.pi * j / n))
-        else:
-            win.append(1)
-    
-    return win
-
-
 class FFT:
 
-    def __init__(self, signal: List[ComplexNumber | complex | float]):
+    def __init__(self, signal, window='hanning', copy=False) -> None:
+        self.__signal = deepcopy(signal) if copy else signal
+        self.__frequency = fft(self.__signal)
 
-        self.__signal = signal.copy()
-        self.__frequency = []
-
-    @property
+    @property 
     def signal(self):
         return self.__signal
 
-    @signal.setter
-    def signal(self, signal: List[ComplexNumber | complex | float]):
-        if not hasattr(signal, '__iter__'):
-            raise TypeError('Unsupported variable type for signal')
-        elif not all([isinstance(s, complex | ComplexNumber | float | int) for s in signal]):
-            raise TypeError('Unsupported variable type for signal. Signal must be List[float | int | ComplexNumber | complex]')
-        self.__signal = signal
-        self.__frequency = fft1(self.signal)
+    @property
+    def frequency(self) -> List[Complex | complex | float]:
+        return self.__frequency
 
     @property
-    def frequency(self):
-        return self.__frequency
-    
+    def real(self) -> List[float]:
+        return [f.real for f in self.__frequency]
+
     @property
-    def real(self):
-        if not self.__frequency : self.__frequency = fft1(self.__signal)
-        return [f.real for f in self.frequency]
-    
-    @property
-    def imag(self):
-        if not self.__frequency : self.__frequency = fft1(self.__signal)
-        return [f.imag for f in self.frequency]
-    
+    def imag(self) -> List[float]:
+        return [f.imag for f in self.__frequency]
+
     @property
     def phase(self):
-        if not self.__frequency : self.__frequency = fft1(self.__signal)
-        return [math.atan2(cn.imag, cn.real) for cn in self.frequency]
+        return [math.atan2(f.imag, f.real) for f in self.frequency]
     
     @property
-    def amplitute(self):
-        if not self.__frequency : self.__frequency = fft1(self.__signal)
-        return [d ** 0.5 for d in self.density]
+    def magnitude(self):
+        return [abs(f) for f in self.__frequency]
 
     @property
     def density(self):
-        if not self.__frequency : self.__frequency = fft1(self.__signal)
-        d = [abs(f) ** 2 for f in self.__frequency]
-        return [d[i] if i == 0 else 2 * d[i] for i in range(len(d))]
+        return [
+            d ** 2 if i == 0 else 2 * d ** 2 
+            for i, d in enumerate(self.magnitude)
+        ]
 
     @classmethod
     def freq(cls, n: int, d: float = 1.0) -> List[float]:
@@ -169,128 +117,31 @@ class FFT:
                 fs[int((n - 1) / 2 + i)] = freqs[i]
         return fs
 
-    @classmethod
-    def window(cls, signal: List[complex | float], w: str = 'ham') -> list[complex | float]:
-        return [sj * wj for sj, wj in zip(signal, window(len(signal), w))]
-
-    def compute(self):
-        self.__frequency = fft1(self.signal)
-
-    def __round__(self, ndigits=0):
-        if not self.__frequency : self.__frequency = fft1(self.__signal)
-        return [round(f, ndigits) for f in self.frequency]
+    def __round__(self, ndigits: int):
+        return [round(f, ndigits) for f in self.__frequency]
 
     def __str__(self):
-        out = '[ '
-        for i, f in enumerate(self.frequency):
-            if i % 2 == 0 and i != 0:
-                out += f'\n{str(f)}\t'
+        out = '['
+        for i, f in enumerate(self.__frequency):
+            if i != len(self.__frequency) - 1:
+                out += f'{f}\n'
             else:
-                out += f'{str(f)}\t'
-            out += ']'
-        return out
+                out += f'{f}]'
 
-class ComplexNumber:
 
-    def __init__(self, real, imag=0):
-        self.__real = real
-        self.__imag = imag
+class Complex(complex):
 
-    @property
-    def real(self):
-        return self.__real
-    
-    @property
-    def imag(self):
-        return self.__imag
+    @classmethod
+    def exp(cls, teta: float | complex) -> complex:
+        return Complex(math.cos(teta), math.sin(teta))
 
     @property
-    def r(self) -> float:
-        return (self.real ** 2 + self.imag ** 2) ** 0.5
-
-    @property
-    def teta(self) -> float:
+    def teta(self):
         return math.atan2(self.imag, self.real)
 
-    @classmethod
-    def exp(cls, teta: float) -> ComplexNumber:
-        return ComplexNumber(math.cos(teta), math.sin(teta))
+    def __round__(self, ndigits: int):
 
-    def conjugate(self):
-        return ComplexNumber(self.real, (-1) * self.imag)
+        if not isinstance(ndigits, int):
+            raise TypeError(f'Number of digits must be integer. Given {type(ndigits)}.')
 
-    def __transform__(self, other) -> ComplexNumber:
-
-        if not isinstance(other, float | int | ComplexNumber | complex):
-            raise TypeError(f"unsupported operand type(s) for '+': {type(self)} and {type(other)}")
-        elif isinstance(other, int | float):
-            other = ComplexNumber(other)
-        elif isinstance(other, complex):
-            other = ComplexNumber(other.real, other.imag)
-        
-        return other
-
-    def __abs__(self) -> float:
-        return (self.real ** 2 + self.imag ** 2) ** 0.5
-
-    def __add__(self, other) -> ComplexNumber:
-        other = self.__transform__(other)
-        return ComplexNumber(self.real + other.real, self.imag + other.imag)
-
-    def __radd__(self, other):
-        return self.__add__(other)
-    
-    def __iadd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        other = self.__transform__(other)
-        return ComplexNumber(self.real - other.real, self.imag - other.imag)
-    
-    def __rsub__(self, other):
-        other = self.__transform__(other)
-        return ComplexNumber(other.real - self.real, other.imag - self.imag)
-
-    def __isub__(self, other):
-        return self.__sub__(other)
-
-    def __mul__(self, other):
-        other = self.__transform__(other)
-
-        return ComplexNumber(self.real * other.real - self.imag * other.imag,
-        self.real * other.imag + self.imag * other.real)
-    
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __imul__(self, other):
-        return self.__mul__(other)
-
-    def __truediv__(self, other):
-        other = self.__transform__(other)
-        devider = other.real ** 2 + other.imag ** 2
-        return ComplexNumber(
-            (self.real * other.real + self.imag * other.imag) / devider,
-            (self.imag * other.real - self.real * other.imag) / devider
-        )
-    
-    def __rtruediv__(self, other):
-        other = self.__transform__(other)
-
-        divider = other.real ** 2 + self.real ** 2
-        return ComplexNumber(
-            (self.real * other.real + self.imag * other.imag) / divider,
-            (self.real * other.imag - self.imag * other.real) / divider
-        )
-
-    def __itruediv__(self, other):
-        return self.__truediv__(other)
-
-    def __round__(self, ndigits=0):
-        return ComplexNumber(round(self.real, ndigits), round(self.imag, ndigits))
-
-    def __str__(self):
-        if self.imag >= 0:
-            return f"{self.real} + {self.imag}j"
-        else:
-            return f"{self.real} - {abs(self.imag)}j"
+        return Complex(round(self.real, ndigits), round(self.imag, ndigits))
